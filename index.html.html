@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工場情報">
+<title>工場情報共有</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e8e6e0;
+    --text: #1a1a18;
+    --text-muted: #7a7870;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --danger: #8b2020;
+    --danger-light: #fdf0f0;
+    --warn: #7a4f00;
+    --warn-light: #fdf5e6;
+    --info: #1a3d6b;
+    --info-light: #eef3fb;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
+  .screen.active { display: block; }
+
+  /* Header */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-title { font-size: 17px; font-weight: 700; flex: 1; letter-spacing: -0.3px; }
+  .header-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 22px;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .header-btn:hover { background: var(--bg); }
+  .header-btn.accent { color: var(--accent); font-size: 15px; font-weight: 500; border-radius: var(--radius-sm); padding: 6px 12px; }
+
+  /* Search */
+  .search-wrap { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .search-inner { position: relative; }
+  .search-inner svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+  .search-input {
+    width: 100%;
+    padding: 9px 12px 9px 38px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* Content area */
+  .content { padding: 16px; }
+
+  /* Factory cards */
+  .factory-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .factory-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .factory-icon {
+    width: 44px; height: 44px;
+    background: var(--accent-light);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--accent);
+    font-size: 20px;
+  }
+  .factory-info { flex: 1; min-width: 0; }
+  .factory-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .factory-addr { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tags-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 2px 7px; border-radius: 999px; font-weight: 500; }
+  .tag.danger { background: var(--danger-light); color: var(--danger); }
+  .tag.warn { background: var(--warn-light); color: var(--warn); }
+  .tag.info { background: var(--info-light); color: var(--info); }
+  .factory-arrow { color: var(--border); font-size: 18px; }
+
+  /* Add factory button */
+  .add-factory-btn {
+    width: 100%;
+    padding: 14px;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    background: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .add-factory-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  /* Detail sections */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 10px;
+    margin-top: 8px;
+  }
+  .section-icon { font-size: 18px; }
+  .section-title { font-size: 14px; font-weight: 700; flex: 1; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .section-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 20px; padding: 4px; border-radius: 50%; display: flex; align-items: center; }
+
+  .entry-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .entry-content { font-size: 14px; line-height: 1.7; margin-bottom: 8px; }
+  .entry-footer { display: flex; align-items: center; justify-content: space-between; }
+  .entry-meta { font-size: 11px; color: var(--text-muted); }
+  .entry-edit { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--text-muted); padding: 3px 8px; border-radius: 4px; font-family: inherit; }
+  .entry-edit:hover { background: var(--bg); color: var(--text); }
+
+  .contact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .contact-avatar {
+    width: 40px; height: 40px;
+    background: var(--info-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--info);
+    flex-shrink: 0;
+  }
+  .contact-info { flex: 1; }
+  .contact-name { font-size: 14px; font-weight: 700; }
+  .contact-role { font-size: 12px; color: var(--text-muted); }
+  .contact-tel { font-size: 13px; color: var(--info); font-weight: 500; }
+  .contact-edit { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 18px; padding: 4px; }
+
+  /* Danger left border */
+  .entry-card.caution { border-left: 3px solid var(--danger); }
+  .entry-card.trouble { border-left: 3px solid var(--warn); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 11px 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); background: var(--surface); }
+  .form-textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    flex: 1;
+    padding: 13px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger-btn { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn:hover { opacity: 0.85; }
+
+  /* Loading / empty */
+  .loading { text-align: center; padding: 40px 16px; color: var(--text-muted); }
+  .loading-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 14px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a18;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 200;
+    transition: transform 0.25s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Delete confirm */
+  .delete-row { text-align: center; margin-top: 8px; }
+  .delete-link { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--danger); font-family: inherit; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Screen: List -->
+<div id="screen-list" class="screen active">
+  <div class="header">
+    <div class="header-title">🏭 工場情報</div>
+    <button class="header-btn accent" onclick="openAddFactory()">＋ 追加</button>
+  </div>
+  <div class="search-wrap">
+    <div class="search-inner">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" type="text" placeholder="工場名で検索..." oninput="filterFactories(this.value)" />
+    </div>
+  </div>
+  <div class="content">
+    <div id="factory-list"><div class="loading"><div class="loading-spinner"></div>読み込み中...</div></div>
+  </div>
+</div>
+
+<!-- Screen: Detail -->
+<div id="screen-detail" class="screen">
+  <div class="header">
+    <button class="header-btn" onclick="showList()">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="header-title" id="detail-title"></div>
+    <button class="header-btn" onclick="openEditFactory()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    </button>
+  </div>
+  <div class="content" id="detail-body"></div>
+</div>
+
+<!-- Modal: Factory -->
+<div id="modal-factory" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-factory-title">工場を追加</div>
+    <div class="form-group">
+      <label class="form-label">工場名 *</label>
+      <input id="f-name" class="form-input" type="text" placeholder="例: 大阪第2工場" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">住所</label>
+      <input id="f-addr" class="form-input" type="text" placeholder="例: 大阪府大阪市..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-factory')">キャンセル</button>
+      <button class="btn primary" onclick="saveFactory()">保存</button>
+    </div>
+    <div id="factory-delete-row" class="delete-row" style="display:none">
+      <button class="delete-link" onclick="deleteFactory()">この工場を削除する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Entry -->
+<div id="modal-entry" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-entry-title">情報を追加</div>
+    <div class="form-group">
+      <label class="form-label">カテゴリ</label>
+      <select id="e-cat" class="form-select" onchange="toggleEntryFields()">
+        <option value="caution">⚠️ 注意事項・危険箇所</option>
+        <option value="trouble">🔧 過去のトラブル事例</option>
+        <option value="contact">👤 担当者・連絡先</option>
+      </select>
+    </div>
+    <div id="e-text-fields">
+      <div class="form-group">
+        <label class="form-label">内容 *</label>
+        <textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea>
+      </div>
+    </div>
+    <div id="e-contact-fields" style="display:none">
+      <div class="form-group">
+        <label class="form-label">名前 *</label>
+        <input id="e-cname" class="form-input" type="text" placeholder="例: 田中 一郎" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">役職</label>
+          <input id="e-crole" class="form-input" type="text" placeholder="例: 現場リーダー" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">電話番号</label>
+          <input id="e-ctel" class="form-input" type="tel" placeholder="06-0000-0000" />
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">投稿者名（任意）</label>
+      <input id="e-author" class="form-input" type="text" placeholder="例: 山田" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-entry')">キャンセル</button>
+      <button class="btn primary" onclick="saveEntry()">保存</button>
+    </div>
+    <div id="entry-delete-row" class="delete-row" style="display:none">
+      <button class="delete-link" onclick="deleteEntry()">この情報を削除する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://lcmaooclxqztiutydtxf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjbWFvb2NseHF6dGl1dHlkdHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTE3OTMsImV4cCI6MjA5NTMyNzc5M30.A0tUwynlzVkBSL49G_J4cRnmWEF4kEYuieikBnBrMHM';
+
+const api = (path, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': opts.prefer || 'return=representation',
+    ...opts.headers
+  },
+  ...opts
+});
+
+let factories = [];
+let currentFactoryId = null;
+let editingEntryId = null;
+let editingFactoryMode = false;
+
+// --- Toast ---
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// --- Modal ---
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// --- Load factories ---
+async function loadFactories() {
+  const res = await api('factories?order=created_at.asc');
+  factories = await res.json();
+  renderList(factories);
+}
+
+function renderList(list) {
+  const el = document.getElementById('factory-list');
+  if (!list.length) { el.innerHTML = '<div class="empty">工場がまだ登録されていません</div>'; return; }
+  el.innerHTML = list.map(f => {
+    const entries = f.entries || [];
+    const cautionCount = entries.filter(e => e.cat === 'caution').length;
+    const troubleCount = entries.filter(e => e.cat === 'trouble').length;
+    const contactCount = entries.filter(e => e.cat === 'contact').length;
+    return `<div class="factory-card" onclick="showDetail('${f.id}')">
+      <div class="factory-icon">🏭</div>
+      <div class="factory-info">
+        <div class="factory-name">${f.name}</div>
+        <div class="factory-addr">${f.addr || '住所未登録'}</div>
+        <div class="tags-row">
+          ${cautionCount ? `<span class="tag danger">⚠ 注意 ${cautionCount}</span>` : ''}
+          ${troubleCount ? `<span class="tag warn">🔧 トラブル ${troubleCount}</span>` : ''}
+          ${contactCount ? `<span class="tag info">👤 担当 ${contactCount}</span>` : ''}
+          ${!cautionCount && !troubleCount && !contactCount ? '<span class="tag info">情報なし</span>' : ''}
+        </div>
+      </div>
+      <div class="factory-arrow">›</div>
+    </div>`;
+  }).join('');
+}
+
+function filterFactories(q) {
+  renderList(factories.filter(f => f.name.includes(q)));
+}
+
+// --- Show detail ---
+async function showDetail(factoryId) {
+  currentFactoryId = factoryId;
+  const factory = factories.find(f => f.id === factoryId);
+  document.getElementById('detail-title').textContent = factory.name;
+  document.getElementById('screen-list').classList.remove('active');
+  document.getElementById('screen-detail').classList.add('active');
+  document.getElementById('detail-body').innerHTML = '<div class="loading"><div class="loading-spinner"></div>読み込み中...</div>';
+
+  const res = await api(`entries?factory_id=eq.${factoryId}&order=created_at.asc`);
+  const entries = await res.json();
+  renderDetail(entries);
+}
+
+function renderDetail(entries) {
+  const cautions = entries.filter(e => e.cat === 'caution');
+  const troubles = entries.filter(e => e.cat === 'trouble');
+  const contacts = entries.filter(e => e.cat === 'contact');
+
+  document.getElementById('detail-body').innerHTML = `
+    <div>
+      <div class="section-header">
+        <span class="section-icon">⚠️</span>
+        <span class="section-title">注意事項・危険箇所</span>
+        <button class="section-add" onclick="openAddEntry('caution')" aria-label="追加">＋</button>
+      </div>
+      ${cautions.length ? cautions.map(e => `
+        <div class="entry-card caution">
+          <div class="entry-content">${e.content}</div>
+          <div class="entry-footer">
+            <div class="entry-meta">${e.author || '匿名'} · ${formatDate(e.created_at)}</div>
+            <button class="entry-edit" onclick="openEditEntry('${e.id}', 'caution')">編集</button>
+          </div>
+        </div>`).join('') : '<div class="empty">まだ登録されていません</div>'}
+    </div>
+
+    <div>
+      <div class="section-header">
+        <span class="section-icon">🔧</span>
+        <span class="section-title">過去のトラブル事例</span>
+        <button class="section-add" onclick="openAddEntry('trouble')" aria-label="追加">＋</button>
+      </div>
+      ${troubles.length ? troubles.map(e => `
+        <div class="entry-card trouble">
+          <div class="entry-content">${e.content}</div>
+          <div class="entry-footer">
+            <div class="entry-meta">${e.author || '匿名'} · ${formatDate(e.created_at)}</div>
+            <button class="entry-edit" onclick="openEditEntry('${e.id}', 'trouble')">編集</button>
+          </div>
+        </div>`).join('') : '<div class="empty">まだ登録されていません</div>'}
+    </div>
+
+    <div>
+      <div class="section-header">
+        <span class="section-icon">👤</span>
+        <span class="section-title">担当者・連絡先</span>
+        <button class="section-add" onclick="openAddEntry('contact')" aria-label="追加">＋</button>
+      </div>
+      ${contacts.length ? contacts.map(e => `
+        <div class="contact-card">
+          <div class="contact-avatar">${(e.name||'?').charAt(0)}</div>
+          <div class="contact-info">
+            <div class="contact-name">${e.name || '名前なし'}</div>
+            <div class="contact-role">${e.role || ''}</div>
+            <div class="contact-tel">${e.tel || ''}</div>
+          </div>
+          <button class="contact-edit" onclick="openEditEntry('${e.id}', 'contact')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>`).join('') : '<div class="empty">まだ登録されていません</div>'}
+    </div>
+  `;
+}
+
+function showList() {
+  document.getElementById('screen-detail').classList.remove('active');
+  document.getElementById('screen-list').classList.add('active');
+  loadFactories();
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+}
+
+// --- Factory modal ---
+function openAddFactory() {
+  editingFactoryMode = false;
+  document.getElementById('modal-factory-title').textContent = '工場を追加';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-addr').value = '';
+  document.getElementById('factory-delete-row').style.display = 'none';
+  document.getElementById('modal-factory').classList.add('open');
+}
+
+function openEditFactory() {
+  editingFactoryMode = true;
+  const f = factories.find(f => f.id === currentFactoryId);
+  document.getElementById('modal-factory-title').textContent = '工場を編集';
+  document.getElementById('f-name').value = f.name;
+  document.getElementById('f-addr').value = f.addr || '';
+  document.getElementById('factory-delete-row').style.display = 'block';
+  document.getElementById('modal-factory').classList.add('open');
+}
+
+async function saveFactory() {
+  const name = document.getElementById('f-name').value.trim();
+  const addr = document.getElementById('f-addr').value.trim();
+  if (!name) { showToast('工場名を入力してください'); return; }
+
+  if (editingFactoryMode) {
+    await api(`factories?id=eq.${currentFactoryId}`, { method: 'PATCH', body: JSON.stringify({ name, addr }) });
+    document.getElementById('detail-title').textContent = name;
+    const f = factories.find(f => f.id === currentFactoryId);
+    if (f) { f.name = name; f.addr = addr; }
+    showToast('更新しました');
+  } else {
+    const res = await api('factories', { method: 'POST', body: JSON.stringify({ name, addr }) });
+    const [newF] = await res.json();
+    factories.push(newF);
+    closeModal('modal-factory');
+    await showDetail(newF.id);
+    showToast('工場を追加しました');
+    return;
+  }
+  closeModal('modal-factory');
+}
+
+async function deleteFactory() {
+  if (!confirm(`この工場と全ての情報を削除しますか？`)) return;
+  await api(`factories?id=eq.${currentFactoryId}`, { method: 'DELETE', prefer: '' });
+  closeModal('modal-factory');
+  showList();
+  showToast('削除しました');
+}
+
+// --- Entry modal ---
+function toggleEntryFields() {
+  const cat = document.getElementById('e-cat').value;
+  document.getElementById('e-contact-fields').style.display = cat === 'contact' ? 'block' : 'none';
+  document.getElementById('e-text-fields').style.display = cat === 'contact' ? 'none' : 'block';
+}
+
+function openAddEntry(cat) {
+  editingEntryId = null;
+  document.getElementById('modal-entry-title').textContent = '情報を追加';
+  document.getElementById('e-cat').value = cat;
+  document.getElementById('e-content').value = '';
+  document.getElementById('e-author').value = '';
+  document.getElementById('e-cname').value = '';
+  document.getElementById('e-crole').value = '';
+  document.getElementById('e-ctel').value = '';
+  document.getElementById('entry-delete-row').style.display = 'none';
+  toggleEntryFields();
+  document.getElementById('modal-entry').classList.add('open');
+}
+
+async function openEditEntry(entryId, cat) {
+  editingEntryId = entryId;
+  const res = await api(`entries?id=eq.${entryId}`);
+  const [e] = await res.json();
+  document.getElementById('modal-entry-title').textContent = '編集';
+  document.getElementById('e-cat').value = e.cat;
+  document.getElementById('e-content').value = e.content || '';
+  document.getElementById('e-author').value = e.author || '';
+  document.getElementById('e-cname').value = e.name || '';
+  document.getElementById('e-crole').value = e.role || '';
+  document.getElementById('e-ctel').value = e.tel || '';
+  document.getElementById('entry-delete-row').style.display = 'block';
+  toggleEntryFields();
+  document.getElementById('modal-entry').classList.add('open');
+}
+
+async function saveEntry() {
+  const cat = document.getElementById('e-cat').value;
+  const author = document.getElementById('e-author').value.trim() || '匿名';
+
+  let body = { cat, author, factory_id: currentFactoryId };
+  if (cat === 'contact') {
+    const name = document.getElementById('e-cname').value.trim();
+    if (!name) { showToast('名前を入力してください'); return; }
+    body = { ...body, name, role: document.getElementById('e-crole').value.trim(), tel: document.getElementById('e-ctel').value.trim() };
+  } else {
+    const content = document.getElementById('e-content').value.trim();
+    if (!content) { showToast('内容を入力してください'); return; }
+    body = { ...body, content };
+  }
+
+  if (editingEntryId) {
+    await api(`entries?id=eq.${editingEntryId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    showToast('更新しました');
+  } else {
+    await api('entries', { method: 'POST', body: JSON.stringify(body) });
+    showToast('追加しました');
+  }
+
+  closeModal('modal-entry');
+  const res = await api(`entries?factory_id=eq.${currentFactoryId}&order=created_at.asc`);
+  renderDetail(await res.json());
+}
+
+async function deleteEntry() {
+  if (!confirm('この情報を削除しますか？')) return;
+  await api(`entries?id=eq.${editingEntryId}`, { method: 'DELETE', prefer: '' });
+  closeModal('modal-entry');
+  const res = await api(`entries?factory_id=eq.${currentFactoryId}&order=created_at.asc`);
+  renderDetail(await res.json());
+  showToast('削除しました');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+loadFactories();
+</script>
+</body>
+</html>
