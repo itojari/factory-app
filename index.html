@@ -23,6 +23,7 @@
   .header-title { font-size: 17px; font-weight: 700; flex: 1; }
   .hbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 22px; padding: 6px; border-radius: 50%; display: flex; align-items: center; }
   .hbtn.acc { color: var(--accent); font-size: 15px; font-weight: 600; border-radius: var(--rs); padding: 6px 12px; }
+  .hbtn.admin-badge { color: #fff; background: var(--accent); font-size: 12px; font-weight: 600; border-radius: var(--rs); padding: 5px 10px; }
   .search-wrap { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
   .search-input { width: 100%; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--rs); font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
   .content { padding: 16px; }
@@ -33,14 +34,10 @@
   .faddr { font-size: 12px; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tags { display: flex; gap: 5px; flex-wrap: wrap; }
   .tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 2px 7px; border-radius: 999px; font-weight: 500; }
-  .tag.d { background: var(--danger-light); color: var(--danger); }
-  .tag.w { background: var(--warn-light); color: var(--warn); }
   .tag.i { background: var(--info-light); color: var(--info); }
   .sec-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; margin-top: 8px; }
   .sec-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; }
-
-  /* アコーディオン */
+  .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: none; }
   .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; }
   .accordion.caution { border-left: 3px solid var(--danger); }
   .accordion.trouble { border-left: 3px solid var(--warn); }
@@ -54,18 +51,15 @@
   .accordion-content { font-size: 14px; line-height: 1.7; padding-top: 10px; color: var(--text); }
   .accordion-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
   .accordion-author { font-size: 11px; color: var(--muted); }
-  .entry-edit { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--muted); padding: 3px 8px; border-radius: 4px; font-family: inherit; text-decoration: underline; }
-
-  /* 担当者カード */
+  .entry-edit { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--muted); padding: 3px 8px; border-radius: 4px; font-family: inherit; text-decoration: underline; display: none; }
   .contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
   .cavatar { width: 40px; height: 40px; background: var(--info-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--info); flex-shrink: 0; }
   .cinfo { flex: 1; }
   .cname { font-size: 14px; font-weight: 700; }
   .crole { font-size: 12px; color: var(--muted); }
   .ctel { font-size: 13px; color: var(--info); font-weight: 500; }
-  .cedit { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; padding: 4px; }
-
-  /* モーダル */
+  .cedit { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; padding: 4px; display: none; }
+  .admin-only { display: none; }
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
   .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
@@ -87,6 +81,12 @@
   .toast.show { transform: translateX(-50%) translateY(0); }
   .del-row { text-align: center; margin-top: 8px; }
   .del-link { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--danger); font-family: inherit; text-decoration: underline; }
+  /* 管理者モード時に表示 */
+  body.is-admin .admin-only { display: block; }
+  body.is-admin .admin-only-flex { display: flex; }
+  body.is-admin .sec-add { display: block; }
+  body.is-admin .entry-edit { display: inline; }
+  body.is-admin .cedit { display: block; }
 </style>
 </head>
 <body>
@@ -94,7 +94,9 @@
 <div id="screen-list" class="screen active">
   <div class="header">
     <div class="header-title">🏭 工場情報</div>
-    <button class="hbtn acc" onclick="openAddFactory()">＋ 追加</button>
+    <button id="admin-login-btn" class="hbtn acc" onclick="openAdminLogin()">管理者</button>
+    <button id="admin-logout-btn" class="hbtn admin-badge admin-only" onclick="logoutAdmin()">管理者 ✓</button>
+    <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="工場名で検索..." oninput="filterFactories(this.value)" />
@@ -108,9 +110,26 @@
   <div class="header">
     <button class="hbtn" onclick="showList()">←</button>
     <div class="header-title" id="detail-title"></div>
-    <button class="hbtn" onclick="openEditFactory()">✏️</button>
+    <button class="hbtn admin-only" onclick="openEditFactory()">✏️</button>
   </div>
   <div class="content" id="detail-body"></div>
+</div>
+
+<!-- 管理者ログインモーダル -->
+<div id="modal-admin" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">管理者ログイン</div>
+    <div class="form-group">
+      <label class="form-label">パスワード</label>
+      <input id="admin-pw" class="form-input" type="password" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')checkAdmin()" />
+    </div>
+    <div id="admin-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none">パスワードが違います</div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-admin')">キャンセル</button>
+      <button class="btn primary" onclick="checkAdmin()">ログイン</button>
+    </div>
+  </div>
 </div>
 
 <div id="modal-factory" class="modal-overlay">
@@ -163,6 +182,7 @@
 <script>
 const SUPABASE_URL = 'https://lcmaooclxqztiutydtxf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjbWFvb2NseHF6dGl1dHlkdHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTE3OTMsImV4cCI6MjA5NTMyNzc5M30.A0tUwynlzVkBSL49G_J4cRnmWEF4kEYuieikBnBrMHM';
+const ADMIN_PASSWORD = '70991514';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -170,6 +190,7 @@ let factories = [];
 let currentFactoryId = null;
 let editingEntryId = null;
 let editingFactory = false;
+let isAdmin = false;
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -179,6 +200,34 @@ function showToast(msg) {
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// 管理者認証
+function openAdminLogin() {
+  document.getElementById('admin-pw').value = '';
+  document.getElementById('admin-error').style.display = 'none';
+  document.getElementById('modal-admin').classList.add('open');
+  setTimeout(() => document.getElementById('admin-pw').focus(), 300);
+}
+
+function checkAdmin() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.body.classList.add('is-admin');
+    document.getElementById('admin-login-btn').style.display = 'none';
+    closeModal('modal-admin');
+    showToast('管理者モードで入りました');
+  } else {
+    document.getElementById('admin-error').style.display = 'block';
+  }
+}
+
+function logoutAdmin() {
+  isAdmin = false;
+  document.body.classList.remove('is-admin');
+  document.getElementById('admin-login-btn').style.display = 'flex';
+  showToast('管理者モードを終了しました');
+}
 
 async function loadFactories() {
   const { data, error } = await db.from('factories').select('*').order('created_at');
@@ -216,9 +265,7 @@ async function showDetail(id) {
   renderDetail(data || []);
 }
 
-function toggleAccordion(el) {
-  el.classList.toggle('open');
-}
+function toggleAccordion(el) { el.classList.toggle('open'); }
 
 function renderDetail(entries) {
   const cautions = entries.filter(e => e.cat === 'caution');
@@ -226,9 +273,9 @@ function renderDetail(entries) {
   const contacts = entries.filter(e => e.cat === 'contact');
 
   const renderAccordion = (e) => `
-    <div class="accordion ${e.cat}" id="acc-${e.id}">
+    <div class="accordion ${e.cat}">
       <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <div class="accordion-headline">${e.headline || e.content?.substring(0,30) || ''}</div>
+        <div class="accordion-headline">${e.headline || ''}</div>
         <div class="accordion-meta">${e.author||'匿名'}</div>
         <div class="accordion-arrow">▼</div>
       </div>
