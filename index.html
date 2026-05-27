@@ -36,17 +36,27 @@
   .tag.d { background: var(--danger-light); color: var(--danger); }
   .tag.w { background: var(--warn-light); color: var(--warn); }
   .tag.i { background: var(--info-light); color: var(--info); }
-  .add-btn { width: 100%; padding: 14px; border: 1.5px dashed var(--border); border-radius: var(--r); background: none; cursor: pointer; color: var(--muted); font-size: 14px; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .sec-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; margin-top: 8px; }
   .sec-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
   .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; }
-  .entry-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; }
-  .entry-card.caution { border-left: 3px solid var(--danger); }
-  .entry-card.trouble { border-left: 3px solid var(--warn); }
-  .entry-content { font-size: 14px; line-height: 1.7; margin-bottom: 8px; }
-  .entry-footer { display: flex; align-items: center; justify-content: space-between; }
-  .entry-meta { font-size: 11px; color: var(--muted); }
+
+  /* アコーディオン */
+  .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; }
+  .accordion.caution { border-left: 3px solid var(--danger); }
+  .accordion.trouble { border-left: 3px solid var(--warn); }
+  .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+  .accordion-headline { flex: 1; font-size: 14px; font-weight: 600; }
+  .accordion-meta { font-size: 11px; color: var(--muted); }
+  .accordion-arrow { color: var(--muted); font-size: 16px; transition: transform 0.2s; flex-shrink: 0; }
+  .accordion.open .accordion-arrow { transform: rotate(180deg); }
+  .accordion-body { display: none; padding: 0 14px 12px; border-top: 1px solid var(--border); }
+  .accordion.open .accordion-body { display: block; }
+  .accordion-content { font-size: 14px; line-height: 1.7; padding-top: 10px; color: var(--text); }
+  .accordion-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .accordion-author { font-size: 11px; color: var(--muted); }
   .entry-edit { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--muted); padding: 3px 8px; border-radius: 4px; font-family: inherit; text-decoration: underline; }
+
+  /* 担当者カード */
   .contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
   .cavatar { width: 40px; height: 40px; background: var(--info-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--info); flex-shrink: 0; }
   .cinfo { flex: 1; }
@@ -54,6 +64,8 @@
   .crole { font-size: 12px; color: var(--muted); }
   .ctel { font-size: 13px; color: var(--info); font-weight: 500; }
   .cedit { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; padding: 4px; }
+
+  /* モーダル */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
   .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
@@ -127,6 +139,7 @@
       </select>
     </div>
     <div id="e-text-fields">
+      <div class="form-group"><label class="form-label">見出し *</label><input id="e-headline" class="form-input" type="text" placeholder="例: 第3ライン 転倒注意" /></div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
     </div>
     <div id="e-contact-fields" style="display:none">
@@ -203,22 +216,48 @@ async function showDetail(id) {
   renderDetail(data || []);
 }
 
+function toggleAccordion(el) {
+  el.classList.toggle('open');
+}
+
 function renderDetail(entries) {
   const cautions = entries.filter(e => e.cat === 'caution');
   const troubles = entries.filter(e => e.cat === 'trouble');
   const contacts = entries.filter(e => e.cat === 'contact');
+
+  const renderAccordion = (e) => `
+    <div class="accordion ${e.cat}" id="acc-${e.id}">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline">${e.headline || e.content?.substring(0,30) || ''}</div>
+        <div class="accordion-meta">${e.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</div>
+      </div>
+      <div class="accordion-body">
+        <div class="accordion-content">${e.content||''}</div>
+        <div class="accordion-footer">
+          <div class="accordion-author">${e.author||'匿名'} · ${fmt(e.created_at)}</div>
+          <button class="entry-edit" onclick="openEditEntry('${e.id}')">編集</button>
+        </div>
+      </div>
+    </div>`;
+
   document.getElementById('detail-body').innerHTML = `
     <div>
       <div class="sec-header"><span>⚠️</span><span class="sec-title">注意事項・危険箇所</span><button class="sec-add" onclick="openAddEntry('caution')">＋</button></div>
-      ${cautions.map(e => `<div class="entry-card caution"><div class="entry-content">${e.content}</div><div class="entry-footer"><div class="entry-meta">${e.author||'匿名'} · ${fmt(e.created_at)}</div><button class="entry-edit" onclick="openEditEntry('${e.id}')">編集</button></div></div>`).join('') || '<div class="empty">まだ登録されていません</div>'}
+      ${cautions.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
       <div class="sec-header"><span>🔧</span><span class="sec-title">過去のトラブル事例</span><button class="sec-add" onclick="openAddEntry('trouble')">＋</button></div>
-      ${troubles.map(e => `<div class="entry-card trouble"><div class="entry-content">${e.content}</div><div class="entry-footer"><div class="entry-meta">${e.author||'匿名'} · ${fmt(e.created_at)}</div><button class="entry-edit" onclick="openEditEntry('${e.id}')">編集</button></div></div>`).join('') || '<div class="empty">まだ登録されていません</div>'}
+      ${troubles.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
       <div class="sec-header"><span>👤</span><span class="sec-title">担当者・連絡先</span><button class="sec-add" onclick="openAddEntry('contact')">＋</button></div>
-      ${contacts.map(e => `<div class="contact-card"><div class="cavatar">${(e.name||'?').charAt(0)}</div><div class="cinfo"><div class="cname">${e.name||''}</div><div class="crole">${e.role||''}</div><div class="ctel">${e.tel||''}</div></div><button class="cedit" onclick="openEditEntry('${e.id}')">✏️</button></div>`).join('') || '<div class="empty">まだ登録されていません</div>'}
+      ${contacts.map(e => `
+        <div class="contact-card">
+          <div class="cavatar">${(e.name||'?').charAt(0)}</div>
+          <div class="cinfo"><div class="cname">${e.name||''}</div><div class="crole">${e.role||''}</div><div class="ctel">${e.tel||''}</div></div>
+          <button class="cedit" onclick="openEditEntry('${e.id}')">✏️</button>
+        </div>`).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>`;
 }
 
@@ -291,6 +330,7 @@ function openAddEntry(cat) {
   editingEntryId = null;
   document.getElementById('me-title').textContent = '情報を追加';
   document.getElementById('e-cat').value = cat;
+  document.getElementById('e-headline').value = '';
   document.getElementById('e-content').value = '';
   document.getElementById('e-author').value = '';
   document.getElementById('e-cname').value = '';
@@ -306,6 +346,7 @@ async function openEditEntry(id) {
   const { data } = await db.from('entries').select('*').eq('id', id).single();
   document.getElementById('me-title').textContent = '編集';
   document.getElementById('e-cat').value = data.cat;
+  document.getElementById('e-headline').value = data.headline || '';
   document.getElementById('e-content').value = data.content || '';
   document.getElementById('e-author').value = data.author || '';
   document.getElementById('e-cname').value = data.name || '';
@@ -325,9 +366,11 @@ async function saveEntry() {
     if (!name) { showToast('名前を入力してください'); return; }
     body = { ...body, name, role: document.getElementById('e-crole').value.trim(), tel: document.getElementById('e-ctel').value.trim() };
   } else {
+    const headline = document.getElementById('e-headline').value.trim();
     const content = document.getElementById('e-content').value.trim();
+    if (!headline) { showToast('見出しを入力してください'); return; }
     if (!content) { showToast('内容を入力してください'); return; }
-    body = { ...body, content };
+    body = { ...body, headline, content };
   }
   let error;
   if (editingEntryId) {
