@@ -160,6 +160,7 @@
     <div id="e-text-fields">
       <div class="form-group"><label class="form-label">見出し *</label><input id="e-headline" class="form-input" type="text" placeholder="例: 第3ライン 転倒注意" /></div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
+    <div class="form-group"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
     </div>
     <div id="e-contact-fields" style="display:none">
       <div class="form-group"><label class="form-label">名前 *</label><input id="e-cname" class="form-input" type="text" placeholder="例: 田中 一郎" /></div>
@@ -281,6 +282,7 @@ function renderDetail(entries) {
       </div>
       <div class="accordion-body">
         <div class="accordion-content">${e.content||''}</div>
+        ${e.admin_note ? `<div class="admin-only" style="margin-top:10px;padding:10px;background:#fdf0f0;border-radius:8px;border:1px solid #f5c0c0"><div style="font-size:11px;font-weight:700;color:#8b2020;margin-bottom:4px">🔒 管理者メモ（非公開）</div><div style="font-size:13px;line-height:1.6">${e.admin_note}</div></div>` : ""}
         <div class="accordion-footer">
           <div class="accordion-author">${e.author||'匿名'} · ${fmt(e.created_at)}</div>
           <button class="entry-edit" onclick="openEditEntry('${e.id}')">編集</button>
@@ -383,6 +385,7 @@ function openAddEntry(cat) {
   document.getElementById('e-cname').value = '';
   document.getElementById('e-crole').value = '';
   document.getElementById('e-ctel').value = '';
+  document.getElementById('e-admin-note').value = '';
   document.getElementById('edelrow').style.display = 'none';
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
@@ -399,6 +402,7 @@ async function openEditEntry(id) {
   document.getElementById('e-cname').value = data.name || '';
   document.getElementById('e-crole').value = data.role || '';
   document.getElementById('e-ctel').value = data.tel || '';
+  document.getElementById('e-admin-note').value = data.admin_note || '';
   document.getElementById('edelrow').style.display = 'block';
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
@@ -417,7 +421,8 @@ async function saveEntry() {
     const content = document.getElementById('e-content').value.trim();
     if (!headline) { showToast('見出しを入力してください'); return; }
     if (!content) { showToast('内容を入力してください'); return; }
-    body = { ...body, headline, content };
+    const admin_note = document.getElementById('e-admin-note').value.trim();
+    body = { ...body, headline, content, admin_note };
   }
   let error;
   if (editingEntryId) {
