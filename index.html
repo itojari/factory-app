@@ -139,6 +139,7 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="mf-title">工場を追加</div>
     <div class="form-group"><label class="form-label">工場名 *</label><input id="f-name" class="form-input" type="text" placeholder="例: 大阪第2工場" /></div>
+    <div class="form-group"><label class="form-label">フリガナ</label><input id="f-furigana" class="form-input" type="text" placeholder="例: オオサカダイニコウジョウ" /></div>
     <div class="form-group"><label class="form-label">住所</label><input id="f-addr" class="form-input" type="text" placeholder="例: 大阪府大阪市..." /></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal('modal-factory')">キャンセル</button>
@@ -233,7 +234,7 @@ function logoutAdmin() {
 }
 
 async function loadFactories() {
-  const { data, error } = await db.from('factories').select('*').order('created_at');
+  const { data, error } = await db.from('factories').select('*').order('furigana', { ascending: true, nullsFirst: false }).order('name', { ascending: true });
   if (error) { showToast('読み込みエラー: ' + error.message); return; }
   factories = data || [];
   renderList(factories);
@@ -247,6 +248,7 @@ function renderList(list) {
       <div class="ficon">🏭</div>
       <div class="finfo">
         <div class="fname">${f.name}</div>
+        ${f.furigana ? `<div style="font-size:11px;color:var(--muted);margin-bottom:2px">${f.furigana}</div>` : ''}
         <div class="faddr">${f.addr || '住所未登録'}</div>
         <div class="tags"><span class="tag i">タップして確認</span></div>
       </div>
@@ -254,7 +256,7 @@ function renderList(list) {
     </div>`).join('');
 }
 
-function filterFactories(q) { renderList(factories.filter(f => f.name.includes(q))); }
+function filterFactories(q) { renderList(factories.filter(f => f.name.includes(q) || (f.furigana && f.furigana.includes(q)))); }
 
 async function showDetail(id) {
   currentFactoryId = id;
@@ -324,6 +326,7 @@ function openAddFactory() {
   editingFactory = false;
   document.getElementById('mf-title').textContent = '工場を追加';
   document.getElementById('f-name').value = '';
+  document.getElementById('f-furigana').value = '';
   document.getElementById('f-addr').value = '';
   document.getElementById('fdelrow').style.display = 'none';
   document.getElementById('modal-factory').classList.add('open');
@@ -334,6 +337,7 @@ function openEditFactory() {
   const f = factories.find(x => x.id === currentFactoryId);
   document.getElementById('mf-title').textContent = '工場を編集';
   document.getElementById('f-name').value = f.name;
+  document.getElementById('f-furigana').value = f.furigana || '';
   document.getElementById('f-addr').value = f.addr || '';
   document.getElementById('fdelrow').style.display = 'block';
   document.getElementById('modal-factory').classList.add('open');
@@ -341,17 +345,18 @@ function openEditFactory() {
 
 async function saveFactory() {
   const name = document.getElementById('f-name').value.trim();
+  const furigana = document.getElementById('f-furigana').value.trim();
   const addr = document.getElementById('f-addr').value.trim();
   if (!name) { showToast('工場名を入力してください'); return; }
   if (editingFactory) {
-    const { error } = await db.from('factories').update({ name, addr }).eq('id', currentFactoryId);
+    const { error } = await db.from('factories').update({ name, furigana, addr }).eq('id', currentFactoryId);
     if (error) { showToast('エラー: ' + error.message); return; }
     document.getElementById('detail-title').textContent = name;
     const f = factories.find(x => x.id === currentFactoryId);
     if (f) { f.name = name; f.addr = addr; }
     showToast('更新しました');
   } else {
-    const { data, error } = await db.from('factories').insert({ name, addr }).select();
+    const { data, error } = await db.from('factories').insert({ name, furigana, addr }).select();
     if (error) { showToast('エラー: ' + error.message); return; }
     factories.push(data[0]);
     closeModal('modal-factory');
