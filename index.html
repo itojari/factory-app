@@ -307,7 +307,7 @@ function renderDetail(entries) {
       ${contacts.map(e => `
         <div class="contact-card">
           <div class="cavatar">${(e.name||'?').charAt(0)}</div>
-          <div class="cinfo"><div class="cname">${e.name||''}</div><div class="crole">${e.role||''}</div><div class="ctel">${e.tel||''}</div></div>
+          <div class="cinfo"><div class="cname">${e.name||''}</div><div class="crole">${e.role||''}</div><div class="ctel">${e.tel ? `<a href="tel:${e.tel}" style="color:var(--info);text-decoration:none;font-weight:500">${e.tel}</a>` : ''}</div></div>
           <button class="cedit" onclick="openEditEntry('${e.id}')">✏️</button>
         </div>`).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>`;
