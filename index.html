@@ -26,6 +26,9 @@
   .hbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 22px; padding: 6px; border-radius: 50%; display: flex; align-items: center; }
   .hbtn.acc { color: var(--accent); font-size: 15px; font-weight: 600; border-radius: var(--rs); padding: 6px 12px; }
   .hbtn.admin-badge { color: #fff; background: var(--accent); font-size: 12px; font-weight: 600; border-radius: var(--rs); padding: 5px 10px; }
+  .tab-wrap { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .tab-btn { flex: 1; padding: 12px 8px; border: none; background: none; font-size: 14px; font-family: inherit; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
   .search-wrap { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
   .search-input { width: 100%; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--rs); font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
   .content { padding: 16px; }
@@ -75,6 +78,12 @@
   .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
   .btn { flex: 1; padding: 13px; border-radius: var(--rs); font-size: 15px; font-family: inherit; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .update-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
+  .update-card.caution { border-left: 3px solid var(--danger); }
+  .update-card.trouble { border-left: 3px solid var(--warn); }
+  .update-factory { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .update-headline { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .update-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
   .loading { text-align: center; padding: 40px 16px; color: var(--muted); }
   .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -100,11 +109,22 @@
     <button id="admin-logout-btn" class="hbtn admin-badge admin-only" onclick="logoutAdmin()">管理者 ✓</button>
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
-  <div class="search-wrap">
-    <input class="search-input" type="text" placeholder="工場名で検索..." oninput="filterFactories(this.value)" />
+  <div class="tab-wrap">
+    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場一覧</button>
+    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新情報</button>
   </div>
-  <div class="content">
-    <div id="factory-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+  <div id="tab-factories-content">
+    <div class="search-wrap">
+      <input class="search-input" type="text" placeholder="工場名で検索..." oninput="filterFactories(this.value)" />
+    </div>
+    <div class="content">
+      <div id="factory-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+    </div>
+  </div>
+  <div id="tab-updates-content" style="display:none">
+    <div class="content">
+      <div id="updates-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+    </div>
   </div>
 </div>
 
@@ -231,6 +251,45 @@ function logoutAdmin() {
   document.body.classList.remove('is-admin');
   document.getElementById('admin-login-btn').style.display = 'flex';
   showToast('管理者モードを終了しました');
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-factories').classList.toggle('active', tab === 'factories');
+  document.getElementById('tab-updates').classList.toggle('active', tab === 'updates');
+  document.getElementById('tab-factories-content').style.display = tab === 'factories' ? 'block' : 'none';
+  document.getElementById('tab-updates-content').style.display = tab === 'updates' ? 'block' : 'none';
+  if (tab === 'updates') loadUpdates();
+}
+
+async function loadUpdates() {
+  document.getElementById('updates-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+  const { data, error } = await db.from('entries')
+    .select('*, factories(name)')
+    .in('cat', ['caution', 'trouble'])
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) { showToast('エラー: ' + error.message); return; }
+  const el = document.getElementById('updates-list');
+  if (!data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
+  el.innerHTML = data.map(e => `
+    <div class="update-card ${e.cat}" onclick="goToFactory('${e.factory_id}', '${(e.factories?.name||'').replace(/'/g,"\'")}')">
+      <div class="update-factory">🏭 ${e.factories?.name || ''}</div>
+      <div class="update-headline">${e.cat === 'caution' ? '⚠️' : '🔧'} ${e.headline || ''}</div>
+      <div class="update-meta">
+        <span>${e.author || '匿名'}</span>
+        <span>${fmt(e.created_at)}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function goToFactory(factoryId, factoryName) {
+  const f = factories.find(x => x.id === factoryId);
+  if (f) {
+    showDetail(factoryId);
+  } else {
+    const { data } = await db.from('factories').select('*').eq('id', factoryId).single();
+    if (data) { factories.push(data); showDetail(factoryId); }
+  }
 }
 
 async function loadFactories() {
