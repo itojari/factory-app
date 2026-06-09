@@ -266,7 +266,7 @@ async function loadUpdates() {
   const { data, error } = await db.from('entries')
     .select('*, factories(name)')
     .in('cat', ['caution', 'trouble'])
-    .order('created_at', { ascending: false })
+    .order('headline', { ascending: false })
     .limit(100);
   if (error) { showToast('エラー: ' + error.message); return; }
   const el = document.getElementById('updates-list');
