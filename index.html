@@ -183,6 +183,7 @@
     <div id="e-text-fields">
       <div class="form-group"><label class="form-label">見出し *</label><input id="e-headline" class="form-input" type="text" placeholder="例: 第3ライン 転倒注意" /></div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
+    <div class="form-group"><label class="form-label">📎 画像・動画URL（Google Drive）</label><input id="e-media-url" class="form-input" type="url" placeholder="Google DriveのリンクURLを貼り付け" /></div>
     <div class="form-group"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
     </div>
     <div id="e-contact-fields" style="display:none">
@@ -328,6 +329,29 @@ async function showDetail(id) {
   renderDetail(data || []);
 }
 
+function renderMedia(url) {
+  if (!url) return '';
+  // Google DriveのURLをembed用に変換
+  const driveMatch = url.match(/\/file\/d\/([^/]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    // 動画かどうかはファイルIDだけでは判断できないので両方試みる
+    return `<div style="border-radius:8px;overflow:hidden;background:#000">
+      <iframe src="https://drive.google.com/file/d/${fileId}/preview" 
+        width="100%" height="220" frameborder="0" allowfullscreen
+        style="display:block"></iframe>
+    </div>
+    <div style="margin-top:4px;text-align:right">
+      <a href="${url}" target="_blank" style="font-size:11px;color:var(--info)">Google Driveで開く ↗</a>
+    </div>`;
+  }
+  // その他のURLは画像として試みる
+  return `<div style="border-radius:8px;overflow:hidden">
+    <img src="${url}" style="width:100%;border-radius:8px;display:block" 
+      onerror="this.parentElement.innerHTML='<a href=\'${url}\' target=\'_blank\' style=\'color:var(--info);font-size:13px\'>📎 添付ファイルを開く ↗</a>'" />
+  </div>`;
+}
+
 function toggleAccordion(el) { el.classList.toggle('open'); }
 
 function renderDetail(entries) {
@@ -344,6 +368,7 @@ function renderDetail(entries) {
       </div>
       <div class="accordion-body">
         <div class="accordion-content">${e.content||''}</div>
+        ${e.media_url ? `<div style="margin-top:10px">${renderMedia(e.media_url)}</div>` : ''}
         ${e.admin_note ? `<div class="admin-only" style="margin-top:10px;padding:10px;background:#fdf0f0;border-radius:8px;border:1px solid #f5c0c0"><div style="font-size:11px;font-weight:700;color:#8b2020;margin-bottom:4px">🔒 管理者メモ（非公開）</div><div style="font-size:13px;line-height:1.6">${e.admin_note}</div></div>` : ""}
         <div class="accordion-footer">
           <div class="accordion-author">${e.author||'匿名'} · ${fmt(e.created_at)}</div>
@@ -451,6 +476,7 @@ function openAddEntry(cat) {
   document.getElementById('e-crole').value = '';
   document.getElementById('e-ctel').value = '';
   document.getElementById('e-admin-note').value = '';
+  document.getElementById('e-media-url').value = '';
   document.getElementById('edelrow').style.display = 'none';
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
@@ -468,6 +494,7 @@ async function openEditEntry(id) {
   document.getElementById('e-crole').value = data.role || '';
   document.getElementById('e-ctel').value = data.tel || '';
   document.getElementById('e-admin-note').value = data.admin_note || '';
+  document.getElementById('e-media-url').value = data.media_url || '';
   document.getElementById('edelrow').style.display = 'block';
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
@@ -487,7 +514,8 @@ async function saveEntry() {
     if (!headline) { showToast('見出しを入力してください'); return; }
     if (!content) { showToast('内容を入力してください'); return; }
     const admin_note = document.getElementById('e-admin-note').value.trim();
-    body = { ...body, headline, content, admin_note };
+    const media_url = document.getElementById('e-media-url').value.trim();
+    body = { ...body, headline, content, admin_note, media_url };
   }
   let error;
   if (editingEntryId) {
