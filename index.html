@@ -183,7 +183,7 @@
     <div id="e-text-fields">
       <div class="form-group"><label class="form-label">見出し *</label><input id="e-headline" class="form-input" type="text" placeholder="例: 第3ライン 転倒注意" /></div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
-    <div class="form-group"><label class="form-label">📎 画像・動画URL（Google Drive）</label><input id="e-media-url" class="form-input" type="url" placeholder="Google DriveのリンクURLを貼り付け" /></div>
+    <div class="form-group"><label class="form-label">📎 画像・動画URL（Google Drive、複数可・改行で区切る）</label><textarea id="e-media-url" class="form-textarea" placeholder="Google DriveのリンクURLを貼り付け\n複数貼る場合は改行して入力" style="min-height:80px"></textarea></div>
     <div class="form-group"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
     </div>
     <div id="e-contact-fields" style="display:none">
@@ -345,27 +345,34 @@ async function showDetail(id) {
   renderDetail(data || []);
 }
 
-function renderMedia(url) {
+function renderSingleMedia(url) {
+  url = url.trim();
   if (!url) return '';
   // Google DriveのURLをembed用に変換
   const driveMatch = url.match(/\/file\/d\/([^/]+)/);
   if (driveMatch) {
     const fileId = driveMatch[1];
-    // 動画かどうかはファイルIDだけでは判断できないので両方試みる
-    return `<div style="border-radius:8px;overflow:hidden;background:#000">
+    return `<div style="border-radius:8px;overflow:hidden;background:#000;margin-bottom:8px">
       <iframe src="https://drive.google.com/file/d/${fileId}/preview" 
         width="100%" height="220" frameborder="0" allowfullscreen
         style="display:block"></iframe>
     </div>
-    <div style="margin-top:4px;text-align:right">
+    <div style="margin-top:-4px;margin-bottom:8px;text-align:right">
       <a href="${url}" target="_blank" style="font-size:11px;color:var(--info)">Google Driveで開く ↗</a>
     </div>`;
   }
   // その他のURLは画像として試みる
-  return `<div style="border-radius:8px;overflow:hidden">
+  return `<div style="border-radius:8px;overflow:hidden;margin-bottom:8px">
     <img src="${url}" style="width:100%;border-radius:8px;display:block" 
       onerror="this.parentElement.innerHTML='<a href=\'${url}\' target=\'_blank\' style=\'color:var(--info);font-size:13px\'>📎 添付ファイルを開く ↗</a>'" />
   </div>`;
+}
+
+function renderMedia(mediaUrl) {
+  if (!mediaUrl) return '';
+  const urls = mediaUrl.split(/\r?\n/).map(u => u.trim()).filter(u => u);
+  if (!urls.length) return '';
+  return urls.map(renderSingleMedia).join('');
 }
 
 function toggleAccordion(el) { el.classList.toggle('open'); }
