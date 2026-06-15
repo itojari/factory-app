@@ -262,14 +262,30 @@ function switchTab(tab) {
   if (tab === 'updates') loadUpdates();
 }
 
+function extractDateFromHeadline(headline) {
+  if (!headline) return null;
+  // 見出し先頭の "YYYY.M.D" や "YYYY/M/D" 形式の日付を抽出
+  const m = headline.match(/^(\d{4})[./](\d{1,2})[./](\d{1,2})/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return new Date(parseInt(y), parseInt(mo) - 1, parseInt(d)).getTime();
+}
+
 async function loadUpdates() {
   document.getElementById('updates-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
   const { data, error } = await db.from('entries')
     .select('*, factories(name)')
     .in('cat', ['caution', 'trouble'])
-    .order('headline', { ascending: false })
     .limit(100);
   if (error) { showToast('エラー: ' + error.message); return; }
+  // 見出しの日付があれば日付で、なければ作成日時でソート（降順）
+  data.sort((a, b) => {
+    const da = extractDateFromHeadline(a.headline);
+    const db_ = extractDateFromHeadline(b.headline);
+    const ta = da !== null ? da : new Date(a.created_at).getTime();
+    const tb = db_ !== null ? db_ : new Date(b.created_at).getTime();
+    return tb - ta;
+  });
   const el = document.getElementById('updates-list');
   if (!data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
   el.innerHTML = data.map(e => `
