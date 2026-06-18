@@ -378,8 +378,15 @@ function renderMedia(mediaUrl) {
 function toggleAccordion(el) { el.classList.toggle('open'); }
 
 function renderDetail(entries) {
-  const cautions = entries.filter(e => e.cat === 'caution');
-  const troubles = entries.filter(e => e.cat === 'trouble');
+  const sortByHeadlineDate = (a, b) => {
+    const da = extractDateFromHeadline(a.headline);
+    const db_ = extractDateFromHeadline(b.headline);
+    const ta = da !== null ? da : new Date(a.created_at).getTime();
+    const tb = db_ !== null ? db_ : new Date(b.created_at).getTime();
+    return tb - ta;
+  };
+  const cautions = entries.filter(e => e.cat === 'caution').sort(sortByHeadlineDate);
+  const troubles = entries.filter(e => e.cat === 'trouble').sort(sortByHeadlineDate);
   const contacts = entries.filter(e => e.cat === 'contact');
 
   const renderAccordion = (e) => `
