@@ -276,7 +276,7 @@ async function loadUpdates() {
   const { data, error } = await db.from('entries')
     .select('*, factories(name)')
     .in('cat', ['caution', 'trouble'])
-    .limit(100);
+    .limit(1000);
   if (error) { showToast('エラー: ' + error.message); return; }
   // 見出しの日付があれば日付で、なければ作成日時でソート（降順）
   data.sort((a, b) => {
