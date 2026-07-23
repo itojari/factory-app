@@ -110,8 +110,10 @@
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
-    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場一覧</button>
-    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新情報</button>
+    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場</button>
+    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新</button>
+    <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')">🚨 災害</button>
+    <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')">⚡ ヒヤリ</button>
   </div>
   <div id="tab-factories-content">
     <div class="search-wrap">
@@ -124,6 +126,20 @@
   <div id="tab-updates-content" style="display:none">
     <div class="content">
       <div id="updates-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+    </div>
+  </div>
+  <div id="tab-disasters-content" style="display:none">
+    <div class="content">
+      <div class="admin-only" style="margin-bottom:12px">
+        <button class="add-factory-btn" onclick="openAddDisaster()">＋ 災害事例を追加</button>
+      </div>
+      <div id="disasters-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+    </div>
+  </div>
+  <div id="tab-nearmisses-content" style="display:none">
+    <div class="content">
+      <button class="add-factory-btn" onclick="openAddNearMiss()" style="margin-bottom:12px">＋ ヒヤリハットを報告</button>
+      <div id="nearmisses-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
     </div>
   </div>
 </div>
@@ -202,6 +218,39 @@
   </div>
 </div>
 
+<!-- 災害事例モーダル -->
+<div id="modal-disaster" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="md-title">災害事例を追加</div>
+    <div class="form-group"><label class="form-label">見出し *</label><input id="d-headline" class="form-input" type="text" placeholder="例: 転落災害事例" /></div>
+    <div class="form-group"><label class="form-label">PDF・資料URL（Google Drive）</label><textarea id="d-url" class="form-textarea" placeholder="Google DriveのURLを貼り付け&#10;複数の場合は改行で区切る" style="min-height:80px"></textarea></div>
+    <div class="form-group"><label class="form-label">投稿者名（任意）</label><input id="d-author" class="form-input" type="text" placeholder="例: 山田" /></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-disaster')">キャンセル</button>
+      <button class="btn primary" onclick="saveDisaster()">保存</button>
+    </div>
+    <div id="ddelrow" class="del-row" style="display:none"><button class="del-link" onclick="deleteDisaster()">この事例を削除する</button></div>
+  </div>
+</div>
+
+<!-- ヒヤリハットモーダル -->
+<div id="modal-nearmiss" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mn-title">ヒヤリハットを報告</div>
+    <div class="form-group"><label class="form-label">日付 *</label><input id="n-date" class="form-input" type="text" placeholder="例: 2026.7.2" /></div>
+    <div class="form-group"><label class="form-label">見出し *</label><input id="n-headline" class="form-input" type="text" placeholder="例: フォークリフト接触ヒヤリ" /></div>
+    <div class="form-group"><label class="form-label">内容 *</label><textarea id="n-content" class="form-textarea" placeholder="状況を詳しく入力..."></textarea></div>
+    <div class="form-group"><label class="form-label">投稿者名（任意）</label><input id="n-author" class="form-input" type="text" placeholder="例: 山田" /></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-nearmiss')">キャンセル</button>
+      <button class="btn primary" onclick="saveNearMiss()">報告する</button>
+    </div>
+    <div id="ndelrow" class="del-row" style="display:none"><button class="del-link" onclick="deleteNearMiss()">この報告を削除する</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -255,11 +304,13 @@ function logoutAdmin() {
 }
 
 function switchTab(tab) {
-  document.getElementById('tab-factories').classList.toggle('active', tab === 'factories');
-  document.getElementById('tab-updates').classList.toggle('active', tab === 'updates');
-  document.getElementById('tab-factories-content').style.display = tab === 'factories' ? 'block' : 'none';
-  document.getElementById('tab-updates-content').style.display = tab === 'updates' ? 'block' : 'none';
+  ['factories','updates','disasters','nearmisses'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', tab === t);
+    document.getElementById('tab-'+t+'-content').style.display = tab === t ? 'block' : 'none';
+  });
   if (tab === 'updates') loadUpdates();
+  if (tab === 'disasters') loadDisasters();
+  if (tab === 'nearmisses') loadNearMisses();
 }
 
 function extractDateFromHeadline(headline) {
@@ -307,6 +358,156 @@ async function goToFactory(factoryId, factoryName) {
     const { data } = await db.from('factories').select('*').eq('id', factoryId).single();
     if (data) { factories.push(data); showDetail(factoryId); }
   }
+}
+
+// --- 災害事例 ---
+let editingDisasterId = null;
+
+async function loadDisasters() {
+  document.getElementById('disasters-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+  const { data, error } = await db.from('disaster_cases').select('*').order('created_at', { ascending: false });
+  if (error) { showToast('エラー: ' + error.message); return; }
+  const el = document.getElementById('disasters-list');
+  if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
+  el.innerHTML = data.map(d => `
+    <div class="accordion" style="border-left:3px solid #DC2626">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline">🚨 ${d.headline}</div>
+        <div class="accordion-meta">${d.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</div>
+      </div>
+      <div class="accordion-body">
+        ${d.url ? `<div style="margin-top:10px">${renderMedia(d.url)}</div>` : '<div style="padding-top:10px;color:var(--muted);font-size:14px">資料なし</div>'}
+        <div class="accordion-footer">
+          <div class="accordion-author">${d.author||'匿名'} · ${fmt(d.created_at)}</div>
+          <button class="entry-edit admin-only" onclick="openEditDisaster('${d.id}')">編集</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openAddDisaster() {
+  editingDisasterId = null;
+  document.getElementById('md-title').textContent = '災害事例を追加';
+  document.getElementById('d-headline').value = '';
+  document.getElementById('d-url').value = '';
+  document.getElementById('d-author').value = '';
+  document.getElementById('ddelrow').style.display = 'none';
+  document.getElementById('modal-disaster').classList.add('open');
+}
+
+async function openEditDisaster(id) {
+  editingDisasterId = id;
+  const { data } = await db.from('disaster_cases').select('*').eq('id', id).single();
+  document.getElementById('md-title').textContent = '災害事例を編集';
+  document.getElementById('d-headline').value = data.headline || '';
+  document.getElementById('d-url').value = data.url || '';
+  document.getElementById('d-author').value = data.author || '';
+  document.getElementById('ddelrow').style.display = 'block';
+  document.getElementById('modal-disaster').classList.add('open');
+}
+
+async function saveDisaster() {
+  const headline = document.getElementById('d-headline').value.trim();
+  const url = document.getElementById('d-url').value.trim();
+  const author = document.getElementById('d-author').value.trim() || '匿名';
+  if (!headline) { showToast('見出しを入力してください'); return; }
+  let error;
+  if (editingDisasterId) {
+    ({ error } = await db.from('disaster_cases').update({ headline, url, author }).eq('id', editingDisasterId));
+  } else {
+    ({ error } = await db.from('disaster_cases').insert({ headline, url, author }));
+  }
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-disaster');
+  loadDisasters();
+  showToast(editingDisasterId ? '更新しました' : '追加しました');
+}
+
+async function deleteDisaster() {
+  if (!confirm('この災害事例を削除しますか？')) return;
+  const { error } = await db.from('disaster_cases').delete().eq('id', editingDisasterId);
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-disaster');
+  loadDisasters();
+  showToast('削除しました');
+}
+
+// --- ヒヤリハット ---
+let editingNearMissId = null;
+
+async function loadNearMisses() {
+  document.getElementById('nearmisses-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+  const { data, error } = await db.from('near_misses').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+  if (error) { showToast('エラー: ' + error.message); return; }
+  const el = document.getElementById('nearmisses-list');
+  if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
+  el.innerHTML = data.map(n => `
+    <div class="accordion" style="border-left:3px solid #F59E0B">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
+        <div class="accordion-meta">${n.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</div>
+      </div>
+      <div class="accordion-body">
+        <div class="accordion-content" style="padding-top:10px">${(n.content||'').replace(/\n/g,'<br>')}</div>
+        <div class="accordion-footer">
+          <div class="accordion-author">${n.author||'匿名'} · ${fmt(n.created_at)}</div>
+          <button class="entry-edit admin-only" onclick="openEditNearMiss('${n.id}')">編集</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openAddNearMiss() {
+  editingNearMissId = null;
+  document.getElementById('mn-title').textContent = 'ヒヤリハットを報告';
+  document.getElementById('n-date').value = '';
+  document.getElementById('n-headline').value = '';
+  document.getElementById('n-content').value = '';
+  document.getElementById('n-author').value = '';
+  document.getElementById('ndelrow').style.display = 'none';
+  document.getElementById('modal-nearmiss').classList.add('open');
+}
+
+async function openEditNearMiss(id) {
+  editingNearMissId = id;
+  const { data } = await db.from('near_misses').select('*').eq('id', id).single();
+  document.getElementById('mn-title').textContent = 'ヒヤリハットを編集';
+  document.getElementById('n-date').value = data.date || '';
+  document.getElementById('n-headline').value = data.headline || '';
+  document.getElementById('n-content').value = data.content || '';
+  document.getElementById('n-author').value = data.author || '';
+  document.getElementById('ndelrow').style.display = 'block';
+  document.getElementById('modal-nearmiss').classList.add('open');
+}
+
+async function saveNearMiss() {
+  const date = document.getElementById('n-date').value.trim();
+  const headline = document.getElementById('n-headline').value.trim();
+  const content = document.getElementById('n-content').value.trim();
+  const author = document.getElementById('n-author').value.trim() || '匿名';
+  if (!headline) { showToast('見出しを入力してください'); return; }
+  if (!content) { showToast('内容を入力してください'); return; }
+  let error;
+  if (editingNearMissId) {
+    ({ error } = await db.from('near_misses').update({ date, headline, content, author }).eq('id', editingNearMissId));
+  } else {
+    ({ error } = await db.from('near_misses').insert({ date, headline, content, author }));
+  }
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-nearmiss');
+  loadNearMisses();
+  showToast(editingNearMissId ? '更新しました' : '報告しました');
+}
+
+async function deleteNearMiss() {
+  if (!confirm('この報告を削除しますか？')) return;
+  const { error } = await db.from('near_misses').delete().eq('id', editingNearMissId);
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-nearmiss');
+  loadNearMisses();
+  showToast('削除しました');
 }
 
 async function loadFactories() {
