@@ -198,6 +198,16 @@
     </div>
     <div id="e-text-fields">
       <div class="form-group"><label class="form-label">見出し *</label><input id="e-headline" class="form-input" type="text" placeholder="例: 第3ライン 転倒注意" /></div>
+      <div class="form-group"><label class="form-label">見出しの背景色</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="" checked> <span style="font-size:13px">なし</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="red"> <span style="background:#FECACA;color:#991B1B;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">赤</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="orange"> <span style="background:#FED7AA;color:#9A3412;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">オレンジ</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="yellow"> <span style="background:#FEF08A;color:#854D0E;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">黄</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="blue"> <span style="background:#BFDBFE;color:#1E40AF;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">青</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="label_color" value="green"> <span style="background:#BBF7D0;color:#166534;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">緑</span></label>
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
     <div class="form-group"><label class="form-label">📎 画像・動画URL（Google Drive、複数可・改行で区切る）</label><textarea id="e-media-url" class="form-textarea" placeholder="Google DriveのリンクURLを貼り付け\n複数貼る場合は改行して入力" style="min-height:80px"></textarea></div>
     <div class="form-group"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
@@ -546,6 +556,17 @@ async function showDetail(id) {
   renderDetail(data || []);
 }
 
+function getLabelStyle(color) {
+  const styles = {
+    'red':    'background:#FECACA;color:#991B1B',
+    'orange': 'background:#FED7AA;color:#9A3412',
+    'yellow': 'background:#FEF08A;color:#854D0E',
+    'blue':   'background:#BFDBFE;color:#1E40AF',
+    'green':  'background:#BBF7D0;color:#166534',
+  };
+  return styles[color] || '';
+}
+
 function renderSingleMedia(url) {
   url = url.trim();
   if (!url) return '';
@@ -593,7 +614,7 @@ function renderDetail(entries) {
   const renderAccordion = (e) => `
     <div class="accordion ${e.cat}">
       <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <div class="accordion-headline">${e.headline || ''}</div>
+        <div class="accordion-headline" ${e.label_color ? `style="${getLabelStyle(e.label_color)};padding:4px 10px;border-radius:6px;display:inline-block"` : ''}>${e.headline || ''}</div>
         <div class="accordion-meta">${e.author||'匿名'}</div>
         <div class="accordion-arrow">▼</div>
       </div>
@@ -701,6 +722,7 @@ function openAddEntry(cat) {
   document.getElementById('me-title').textContent = '情報を追加';
   document.getElementById('e-cat').value = cat;
   document.getElementById('e-headline').value = '';
+  document.querySelectorAll('input[name="label_color"]').forEach(r => r.checked = r.value === '');
   document.getElementById('e-content').value = '';
   document.getElementById('e-author').value = '';
   document.getElementById('e-cname').value = '';
@@ -719,6 +741,7 @@ async function openEditEntry(id) {
   document.getElementById('me-title').textContent = '編集';
   document.getElementById('e-cat').value = data.cat;
   document.getElementById('e-headline').value = data.headline || '';
+  document.querySelectorAll('input[name="label_color"]').forEach(r => r.checked = r.value === (data.label_color || ''));
   document.getElementById('e-content').value = data.content || '';
   document.getElementById('e-author').value = data.author || '';
   document.getElementById('e-cname').value = data.name || '';
@@ -741,12 +764,13 @@ async function saveEntry() {
     body = { ...body, name, role: document.getElementById('e-crole').value.trim(), tel: document.getElementById('e-ctel').value.trim() };
   } else {
     const headline = document.getElementById('e-headline').value.trim();
+    const label_color = document.querySelector('input[name="label_color"]:checked')?.value || '';
     const content = document.getElementById('e-content').value.trim();
     if (!headline) { showToast('見出しを入力してください'); return; }
     if (!content) { showToast('内容を入力してください'); return; }
     const admin_note = document.getElementById('e-admin-note').value.trim();
     const media_url = document.getElementById('e-media-url').value.trim();
-    body = { ...body, headline, content, admin_note, media_url };
+    body = { ...body, headline, content, admin_note, media_url, label_color };
   }
   let error;
   if (editingEntryId) {
