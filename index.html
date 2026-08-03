@@ -46,10 +46,10 @@
   .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; }
   .accordion.caution { border-left: 3px solid var(--danger); }
   .accordion.trouble { border-left: 3px solid var(--warn); }
-  .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; width: 100%; background: none; border: none; text-align: left; font-family: inherit; font-size: inherit; }
-  .accordion-headline { flex: 1; font-size: 14px; font-weight: 600; display: inline-block; }
-  .accordion-meta { font-size: 11px; color: var(--muted); display: inline-block; }
-  .accordion-arrow { color: var(--muted); font-size: 16px; transition: transform 0.2s; flex-shrink: 0; display: inline-block; }
+  .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+  .accordion-headline { flex: 1; font-size: 14px; font-weight: 600; }
+  .accordion-meta { font-size: 11px; color: var(--muted); }
+  .accordion-arrow { color: var(--muted); font-size: 16px; transition: transform 0.2s; flex-shrink: 0; }
   .accordion.open .accordion-arrow { transform: rotate(180deg); }
   .accordion-body { display: none; padding: 0 14px 12px; border-top: 1px solid var(--border); }
   .accordion.open .accordion-body { display: block; }
@@ -110,10 +110,10 @@
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
-    <button class="tab-btn active" id="tab-factories" onclick="event.stopPropagation();switchTab('factories')">🏭 工場</button>
-    <button class="tab-btn" id="tab-updates" onclick="event.stopPropagation();switchTab('updates')">📋 更新</button>
-    <button class="tab-btn" id="tab-disasters" onclick="event.stopPropagation();switchTab('disasters')">🚨 災害</button>
-    <button class="tab-btn" id="tab-nearmisses" onclick="event.stopPropagation();switchTab('nearmisses')">⚡ ヒヤリ</button>
+    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場</button>
+    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新</button>
+    <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')">🚨 災害</button>
+    <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')">⚡ ヒヤリ</button>
   </div>
   <div id="tab-factories-content">
     <div class="search-wrap">
@@ -313,10 +313,7 @@ function logoutAdmin() {
   showToast('管理者モードを終了しました');
 }
 
-let currentTab = 'factories';
 function switchTab(tab) {
-  if (tab === currentTab && tab !== 'factories') return; // 同じタブなら無視
-  currentTab = tab;
   ['factories','updates','disasters','nearmisses'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', tab === t);
     document.getElementById('tab-'+t+'-content').style.display = tab === t ? 'block' : 'none';
@@ -384,11 +381,11 @@ async function loadDisasters() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
   el.innerHTML = data.map(d => `
     <div class="accordion" style="border-left:3px solid #DC2626">
-      <button type="button" class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <span class="accordion-headline">🚨 ${d.headline}</span>
-        <span class="accordion-meta">${d.author||'匿名'}</span>
-        <span class="accordion-arrow">▼</span>
-      </button>
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline">🚨 ${d.headline}</div>
+        <div class="accordion-meta">${d.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</span>
+      </div>
       <div class="accordion-body">
         ${d.url ? `<div style="margin-top:10px">${renderMedia(d.url)}</div>` : '<div style="padding-top:10px;color:var(--muted);font-size:14px">資料なし</div>'}
         <div class="accordion-footer">
@@ -457,11 +454,11 @@ async function loadNearMisses() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
   el.innerHTML = data.map(n => `
     <div class="accordion" style="border-left:3px solid #F59E0B">
-      <button type="button" class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <span class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</span>
-        <span class="accordion-meta">${n.author||'匿名'}</span>
-        <span class="accordion-arrow">▼</span>
-      </button>
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
+        <div class="accordion-meta">${n.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</span>
+      </div>
       <div class="accordion-body">
         <div class="accordion-content" style="padding-top:10px">${(n.content||'').replace(/\n/g,'<br>')}</div>
         <div class="accordion-footer">
@@ -617,11 +614,11 @@ function renderDetail(entries) {
 
   const renderAccordion = (e) => `
     <div class="accordion ${e.cat}">
-      <button type="button" class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <span class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</span>
-        <span class="accordion-meta">${e.author||'匿名'}</span>
-        <span class="accordion-arrow">▼</span>
-      </button>
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
+        <div class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</div>
+        <div class="accordion-meta">${e.author||'匿名'}</div>
+        <div class="accordion-arrow">▼</span>
+      </div>
       <div class="accordion-body">
         <div class="accordion-content">${(e.content||'').replace(/\n/g, '<br>')}</div>
         ${e.media_url ? `<div style="margin-top:10px">${renderMedia(e.media_url)}</div>` : ''}
