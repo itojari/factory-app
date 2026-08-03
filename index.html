@@ -618,7 +618,7 @@ function renderDetail(entries) {
   const renderAccordion = (e) => `
     <div class="accordion ${e.cat}">
       <button type="button" class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <div class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</span>
+        <span class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</span>
         <span class="accordion-meta">${e.author||'匿名'}</span>
         <span class="accordion-arrow">▼</span>
       </button>
