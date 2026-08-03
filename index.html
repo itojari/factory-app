@@ -110,10 +110,10 @@
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
-    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場</button>
-    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新</button>
-    <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')">🚨 災害</button>
-    <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')">⚡ ヒヤリ</button>
+    <button class="tab-btn active" id="tab-factories" onclick="event.stopPropagation();switchTab('factories')">🏭 工場</button>
+    <button class="tab-btn" id="tab-updates" onclick="event.stopPropagation();switchTab('updates')">📋 更新</button>
+    <button class="tab-btn" id="tab-disasters" onclick="event.stopPropagation();switchTab('disasters')">🚨 災害</button>
+    <button class="tab-btn" id="tab-nearmisses" onclick="event.stopPropagation();switchTab('nearmisses')">⚡ ヒヤリ</button>
   </div>
   <div id="tab-factories-content">
     <div class="search-wrap">
@@ -313,7 +313,10 @@ function logoutAdmin() {
   showToast('管理者モードを終了しました');
 }
 
+let currentTab = 'factories';
 function switchTab(tab) {
+  if (tab === currentTab && tab !== 'factories') return; // 同じタブなら無視
+  currentTab = tab;
   ['factories','updates','disasters','nearmisses'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', tab === t);
     document.getElementById('tab-'+t+'-content').style.display = tab === t ? 'block' : 'none';
@@ -381,7 +384,7 @@ async function loadDisasters() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
   el.innerHTML = data.map(d => `
     <div class="accordion" style="border-left:3px solid #DC2626">
-      <div class="accordion-header" onclick="event.stopPropagation();event.preventDefault();toggleAccordion(this.parentElement)">
+      <div class="accordion-header">
         <div class="accordion-headline">🚨 ${d.headline}</div>
         <div class="accordion-meta">${d.author||'匿名'}</div>
         <div class="accordion-arrow">▼</div>
@@ -454,7 +457,7 @@ async function loadNearMisses() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
   el.innerHTML = data.map(n => `
     <div class="accordion" style="border-left:3px solid #F59E0B">
-      <div class="accordion-header" onclick="event.stopPropagation();event.preventDefault();toggleAccordion(this.parentElement)">
+      <div class="accordion-header">
         <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
         <div class="accordion-meta">${n.author||'匿名'}</div>
         <div class="accordion-arrow">▼</div>
@@ -599,6 +602,19 @@ function renderMedia(mediaUrl) {
 
 function toggleAccordion(el) { el.classList.toggle('open'); }
 
+// アコーディオンのクリックをキャプチャフェーズで処理してタブへの伝播を完全に防ぐ
+document.addEventListener('DOMContentLoaded', function() {
+  document.body.addEventListener('click', function(e) {
+    const header = e.target.closest('.accordion-header');
+    if (header) {
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      e.preventDefault();
+      toggleAccordion(header.parentElement);
+    }
+  }, true);
+});
+
 function renderDetail(entries) {
   const sortByHeadlineDate = (a, b) => {
     const da = extractDateFromHeadline(a.headline);
@@ -613,7 +629,7 @@ function renderDetail(entries) {
 
   const renderAccordion = (e) => `
     <div class="accordion ${e.cat}">
-      <div class="accordion-header" onclick="event.stopPropagation();event.preventDefault();toggleAccordion(this.parentElement)">
+      <div class="accordion-header">
         <div class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</div>
         <div class="accordion-meta">${e.author||'匿名'}</div>
         <div class="accordion-arrow">▼</div>
