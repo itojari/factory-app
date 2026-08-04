@@ -19,9 +19,9 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
-  .screen { display: none; min-height: 100vh; padding-bottom: 80px; pointer-events: none; }
-  .screen.active { display: block; pointer-events: auto; }
-  .header { position: relative; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
+  .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
+  .screen.active { display: block; }
+  .header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
   .header-title { font-size: 17px; font-weight: 700; flex: 1; }
   .hbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 22px; padding: 6px; border-radius: 50%; display: flex; align-items: center; }
   .hbtn.acc { color: var(--accent); font-size: 15px; font-weight: 600; border-radius: var(--rs); padding: 6px 12px; }
@@ -381,10 +381,10 @@ async function loadDisasters() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
   el.innerHTML = data.map(d => `
     <div class="accordion" style="border-left:3px solid #DC2626">
-      <div class="accordion-header" onclick="event.stopImmediatePropagation();this.parentElement.classList.toggle('open')">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
         <div class="accordion-headline">🚨 ${d.headline}</div>
         <div class="accordion-meta">${d.author||'匿名'}</div>
-        <div class="accordion-arrow">▼</span>
+        <div class="accordion-arrow">▼</div>
       </div>
       <div class="accordion-body">
         ${d.url ? `<div style="margin-top:10px">${renderMedia(d.url)}</div>` : '<div style="padding-top:10px;color:var(--muted);font-size:14px">資料なし</div>'}
@@ -454,10 +454,10 @@ async function loadNearMisses() {
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
   el.innerHTML = data.map(n => `
     <div class="accordion" style="border-left:3px solid #F59E0B">
-      <div class="accordion-header" onclick="event.stopImmediatePropagation();this.parentElement.classList.toggle('open')">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
         <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
         <div class="accordion-meta">${n.author||'匿名'}</div>
-        <div class="accordion-arrow">▼</span>
+        <div class="accordion-arrow">▼</div>
       </div>
       <div class="accordion-body">
         <div class="accordion-content" style="padding-top:10px">${(n.content||'').replace(/\n/g,'<br>')}</div>
@@ -616,10 +616,10 @@ function renderDetail(entries) {
 
   const renderAccordion = (e) => `
     <div class="accordion ${e.cat}">
-      <div class="accordion-header" onclick="event.stopImmediatePropagation();this.parentElement.classList.toggle('open')">
+      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
         <div class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</div>
         <div class="accordion-meta">${e.author||'匿名'}</div>
-        <div class="accordion-arrow">▼</span>
+        <div class="accordion-arrow">▼</div>
       </div>
       <div class="accordion-body">
         <div class="accordion-content">${(e.content||'').replace(/\n/g, '<br>')}</div>
