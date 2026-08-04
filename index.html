@@ -153,6 +153,15 @@
   <div class="content" id="detail-body"></div>
 </div>
 
+<div id="screen-item" class="screen">
+  <div class="header">
+    <button class="hbtn" onclick="backToList()">←</button>
+    <div class="header-title" id="item-title"></div>
+    <button class="hbtn admin-only" id="item-edit-btn">✏️</button>
+  </div>
+  <div class="content" id="item-body"></div>
+</div>
+
 <!-- 管理者ログインモーダル -->
 <div id="modal-admin" class="modal-overlay">
   <div class="modal">
@@ -372,6 +381,8 @@ async function goToFactory(factoryId, factoryName) {
 
 // --- 災害事例 ---
 let editingDisasterId = null;
+let disasterCache = [];
+let nearMissCache = [];
 
 async function loadDisasters() {
   document.getElementById('disasters-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
@@ -379,21 +390,30 @@ async function loadDisasters() {
   if (error) { showToast('エラー: ' + error.message); return; }
   const el = document.getElementById('disasters-list');
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
+  disasterCache = data;
   el.innerHTML = data.map(d => `
-    <div class="accordion" style="border-left:3px solid #DC2626">
-      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <div class="accordion-headline">🚨 ${d.headline}</div>
-        <div class="accordion-meta">${d.author||'匿名'}</div>
-        <div class="accordion-arrow">▼</div>
+    <div class="factory-card" style="border-left:3px solid #DC2626" onclick="showDisaster('${d.id}')">
+      <div class="ficon">🚨</div>
+      <div class="finfo">
+        <div class="fname">${d.headline}</div>
+        <div class="faddr">${d.author||'匿名'} · ${fmt(d.created_at)}</div>
       </div>
-      <div class="accordion-body">
-        ${d.url ? `<div style="margin-top:10px">${renderMedia(d.url)}</div>` : '<div style="padding-top:10px;color:var(--muted);font-size:14px">資料なし</div>'}
-        <div class="accordion-footer">
-          <div class="accordion-author">${d.author||'匿名'} · ${fmt(d.created_at)}</div>
-          <button class="entry-edit admin-only" onclick="openEditDisaster('${d.id}')">編集</button>
-        </div>
-      </div>
+      <div style="color:#ccc;font-size:20px">›</div>
     </div>`).join('');
+}
+
+function showDisaster(id) {
+  const d = disasterCache.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('item-title').textContent = d.headline;
+  const btn = document.getElementById('item-edit-btn');
+  btn.onclick = function() { openEditDisaster(id); };
+  document.getElementById('item-body').innerHTML =
+    (d.url ? renderMedia(d.url) : '<div style="color:var(--muted);font-size:14px">資料なし</div>') +
+    '<div style="margin-top:14px;font-size:12px;color:var(--muted)">' + (d.author||'匿名') + ' · ' + fmt(d.created_at) + '</div>';
+  document.getElementById('screen-list').classList.remove('active');
+  document.getElementById('screen-item').classList.add('active');
+  window.scrollTo(0,0);
 }
 
 function openAddDisaster() {
@@ -430,6 +450,7 @@ async function saveDisaster() {
   }
   if (error) { showToast('エラー: ' + error.message); return; }
   closeModal('modal-disaster');
+  backToList();
   loadDisasters();
   showToast(editingDisasterId ? '更新しました' : '追加しました');
 }
@@ -439,6 +460,7 @@ async function deleteDisaster() {
   const { error } = await db.from('disaster_cases').delete().eq('id', editingDisasterId);
   if (error) { showToast('エラー: ' + error.message); return; }
   closeModal('modal-disaster');
+  backToList();
   loadDisasters();
   showToast('削除しました');
 }
@@ -452,21 +474,30 @@ async function loadNearMisses() {
   if (error) { showToast('エラー: ' + error.message); return; }
   const el = document.getElementById('nearmisses-list');
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
+  nearMissCache = data;
   el.innerHTML = data.map(n => `
-    <div class="accordion" style="border-left:3px solid #F59E0B">
-      <div class="accordion-header" onclick="toggleAccordion(this.parentElement)">
-        <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
-        <div class="accordion-meta">${n.author||'匿名'}</div>
-        <div class="accordion-arrow">▼</div>
+    <div class="factory-card" style="border-left:3px solid #F59E0B" onclick="showNearMiss('${n.id}')">
+      <div class="ficon">⚡</div>
+      <div class="finfo">
+        <div class="fname">${n.date ? n.date+' ' : ''}${n.headline}</div>
+        <div class="faddr">${n.author||'匿名'} · ${fmt(n.created_at)}</div>
       </div>
-      <div class="accordion-body">
-        <div class="accordion-content" style="padding-top:10px">${(n.content||'').replace(/\n/g,'<br>')}</div>
-        <div class="accordion-footer">
-          <div class="accordion-author">${n.author||'匿名'} · ${fmt(n.created_at)}</div>
-          <button class="entry-edit admin-only" onclick="openEditNearMiss('${n.id}')">編集</button>
-        </div>
-      </div>
+      <div style="color:#ccc;font-size:20px">›</div>
     </div>`).join('');
+}
+
+function showNearMiss(id) {
+  const n = nearMissCache.find(x => x.id === id);
+  if (!n) return;
+  document.getElementById('item-title').textContent = (n.date ? n.date+' ' : '') + n.headline;
+  const btn = document.getElementById('item-edit-btn');
+  btn.onclick = function() { openEditNearMiss(id); };
+  document.getElementById('item-body').innerHTML =
+    '<div style="font-size:14px;line-height:1.7">' + (n.content||'').replace(/\n/g,'<br>') + '</div>' +
+    '<div style="margin-top:14px;font-size:12px;color:var(--muted)">' + (n.author||'匿名') + ' · ' + fmt(n.created_at) + '</div>';
+  document.getElementById('screen-list').classList.remove('active');
+  document.getElementById('screen-item').classList.add('active');
+  window.scrollTo(0,0);
 }
 
 function openAddNearMiss() {
@@ -507,6 +538,7 @@ async function saveNearMiss() {
   }
   if (error) { showToast('エラー: ' + error.message); return; }
   closeModal('modal-nearmiss');
+  backToList();
   loadNearMisses();
   showToast(editingNearMissId ? '更新しました' : '報告しました');
 }
@@ -516,6 +548,7 @@ async function deleteNearMiss() {
   const { error } = await db.from('near_misses').delete().eq('id', editingNearMissId);
   if (error) { showToast('エラー: ' + error.message); return; }
   closeModal('modal-nearmiss');
+  backToList();
   loadNearMisses();
   showToast('削除しました');
 }
@@ -548,6 +581,7 @@ async function showDetail(id) {
   currentFactoryId = id;
   const f = factories.find(x => x.id === id);
   document.getElementById('detail-title').textContent = f.name;
+  document.getElementById('screen-item').classList.remove('active');
   document.getElementById('screen-list').classList.remove('active');
   document.getElementById('screen-detail').classList.add('active');
   document.getElementById('detail-body').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
@@ -598,6 +632,11 @@ function renderMedia(mediaUrl) {
 }
 
 function toggleAccordion(el) { el.classList.toggle('open'); }
+
+function backToList() {
+  document.getElementById('screen-item').classList.remove('active');
+  document.getElementById('screen-list').classList.add('active');
+}
 
 
 
@@ -655,6 +694,7 @@ function renderDetail(entries) {
 function fmt(iso) { if (!iso) return ''; const d = new Date(iso); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
 function showList() {
+  document.getElementById('screen-item').classList.remove('active');
   document.getElementById('screen-detail').classList.remove('active');
   document.getElementById('screen-list').classList.add('active');
   loadFactories();
