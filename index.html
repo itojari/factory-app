@@ -601,22 +601,23 @@ function toggleAccordion(el) { el.classList.toggle('open'); }
 
 // iOSを含む全デバイス対応のアコーディオン制御
 (function() {
-  function handleAccordionClick(e) {
-    // 編集・削除ボタンのクリックは無視
-    if (e.target.closest('button') && !e.target.closest('.accordion')) return;
-    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
-    var acc = e.target.closest('.accordion');
-    if (acc) {
-      e.stopPropagation();
-      acc.classList.toggle('open');
-    }
-  }
-  document.addEventListener('click', handleAccordionClick);
+  var touchHandled = false;
   document.addEventListener('touchend', function(e) {
     if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
     var acc = e.target.closest('.accordion');
     if (acc) {
       e.preventDefault();
+      e.stopPropagation();
+      touchHandled = true;
+      acc.classList.toggle('open');
+      setTimeout(function(){ touchHandled = false; }, 500);
+    }
+  });
+  document.addEventListener('click', function(e) {
+    if (touchHandled) return;
+    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
+    var acc = e.target.closest('.accordion');
+    if (acc) {
       e.stopPropagation();
       acc.classList.toggle('open');
     }
