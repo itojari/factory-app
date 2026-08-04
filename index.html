@@ -601,24 +601,29 @@ function toggleAccordion(el) { el.classList.toggle('open'); }
 
 // iOSを含む全デバイス対応のアコーディオン制御
 (function() {
-  var touchHandled = false;
-  document.addEventListener('touchend', function(e) {
-    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
+  var touching = false;
+  document.addEventListener('touchstart', function(e) {
     var acc = e.target.closest('.accordion');
-    if (acc) {
-      e.preventDefault();
-      e.stopPropagation();
-      touchHandled = true;
-      acc.classList.toggle('open');
-      setTimeout(function(){ touchHandled = false; }, 500);
+    if (acc && !e.target.closest('.entry-edit') && !e.target.closest('.del-link') && !e.target.closest('button')) {
+      touching = true;
     }
-  });
-  document.addEventListener('click', function(e) {
-    if (touchHandled) return;
-    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
+  }, {passive: true});
+
+  document.addEventListener('touchend', function(e) {
+    if (!touching) return;
+    touching = false;
     var acc = e.target.closest('.accordion');
-    if (acc) {
-      e.stopPropagation();
+    if (acc && !e.target.closest('.entry-edit') && !e.target.closest('.del-link') && !e.target.closest('button')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      acc.classList.toggle('open');
+    }
+  }, {passive: false});
+
+  document.addEventListener('click', function(e) {
+    var acc = e.target.closest('.accordion');
+    if (acc && !e.target.closest('.entry-edit') && !e.target.closest('.del-link') && !e.target.closest('button')) {
+      e.stopImmediatePropagation();
       acc.classList.toggle('open');
     }
   });
