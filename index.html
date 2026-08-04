@@ -683,8 +683,9 @@ function renderDetail(entries) {
 function fmt(iso) { if (!iso) return ''; const d = new Date(iso); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
 function showList() {
+  console.log('showList called', new Error().stack);
   document.getElementById('screen-detail').classList.remove('active');
-  document.getElementById('screen-list').classList.add('active');
+  document.getElementById('screen-list').classList.add('active'); alert('screen-list activated!');
   loadFactories();
 }
 
