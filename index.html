@@ -21,7 +21,7 @@
   body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
   .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
   .screen.active { display: block; }
-  .header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
+  .header { position: relative; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
   .header-title { font-size: 17px; font-weight: 700; flex: 1; }
   .hbtn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 22px; padding: 6px; border-radius: 50%; display: flex; align-items: center; }
   .hbtn.acc { color: var(--accent); font-size: 15px; font-weight: 600; border-radius: var(--rs); padding: 6px 12px; }
@@ -110,7 +110,7 @@
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
-    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')" style="pointer-events:none">🏭 工場</button>
+    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場</button>
     <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新</button>
     <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')">🚨 災害</button>
     <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')">⚡ ヒヤリ</button>
