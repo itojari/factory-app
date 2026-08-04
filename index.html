@@ -43,7 +43,7 @@
   .sec-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; margin-top: 8px; }
   .sec-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
   .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: none; }
-  .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: rgba(0,0,0,0.05); }
+  .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
   .accordion.caution { border-left: 3px solid var(--danger); }
   .accordion.trouble { border-left: 3px solid var(--warn); }
   .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
@@ -380,7 +380,7 @@ async function loadDisasters() {
   const el = document.getElementById('disasters-list');
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
   el.innerHTML = data.map(d => `
-    <div class="accordion" style="border-left:3px solid #DC2626" onclick="toggleAccordion(this)">
+    <div class="accordion" style="border-left:3px solid #DC2626">
       <div class="accordion-header">
         <div class="accordion-headline">🚨 ${d.headline}</div>
         <div class="accordion-meta">${d.author||'匿名'}</div>
@@ -453,7 +453,7 @@ async function loadNearMisses() {
   const el = document.getElementById('nearmisses-list');
   if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ報告されていません</div>'; return; }
   el.innerHTML = data.map(n => `
-    <div class="accordion" style="border-left:3px solid #F59E0B" onclick="toggleAccordion(this)">
+    <div class="accordion" style="border-left:3px solid #F59E0B">
       <div class="accordion-header">
         <div class="accordion-headline">⚡ ${n.date ? n.date+' ' : ''}${n.headline}</div>
         <div class="accordion-meta">${n.author||'匿名'}</div>
@@ -599,6 +599,30 @@ function renderMedia(mediaUrl) {
 
 function toggleAccordion(el) { el.classList.toggle('open'); }
 
+// iOSを含む全デバイス対応のアコーディオン制御
+(function() {
+  function handleAccordionClick(e) {
+    // 編集・削除ボタンのクリックは無視
+    if (e.target.closest('button') && !e.target.closest('.accordion')) return;
+    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
+    var acc = e.target.closest('.accordion');
+    if (acc) {
+      e.stopPropagation();
+      acc.classList.toggle('open');
+    }
+  }
+  document.addEventListener('click', handleAccordionClick);
+  document.addEventListener('touchend', function(e) {
+    if (e.target.closest('.entry-edit') || e.target.closest('.del-link')) return;
+    var acc = e.target.closest('.accordion');
+    if (acc) {
+      e.preventDefault();
+      e.stopPropagation();
+      acc.classList.toggle('open');
+    }
+  });
+})();
+
 
 function renderDetail(entries) {
   const sortByHeadlineDate = (a, b) => {
@@ -613,7 +637,7 @@ function renderDetail(entries) {
   const contacts = entries.filter(e => e.cat === 'contact');
 
   const renderAccordion = (e) => `
-    <div class="accordion ${e.cat}" onclick="toggleAccordion(this)">
+    <div class="accordion ${e.cat}">
       <div class="accordion-header">
         <div class="accordion-headline" ${e.label_color ? 'style="'+getLabelStyle(e.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${e.headline || ''}</div>
         <div class="accordion-meta">${e.author||'匿名'}</div>
