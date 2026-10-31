@@ -42,10 +42,12 @@
   .tag.i { background: var(--info-light); color: var(--info); }
   .sec-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; margin-top: 8px; }
   .sec-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .sec-add-all { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: block; }
   .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: none; }
   .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
   .accordion.caution { border-left: 3px solid var(--danger); }
   .accordion.trouble { border-left: 3px solid var(--warn); }
+  .accordion.notice { border-left: 3px solid var(--info); }
   .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
   .accordion-headline { flex: 1; font-size: 14px; font-weight: 600; }
   .accordion-meta { font-size: 11px; color: var(--muted); }
@@ -198,10 +200,11 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="me-title">情報を追加</div>
-    <div class="form-group"><label class="form-label">カテゴリ</label>
+    <div class="form-group admin-only"><label class="form-label">カテゴリ</label>
       <select id="e-cat" class="form-select" onchange="toggleEntryFields()">
         <option value="caution">⚠️ 注意事項・危険箇所</option>
         <option value="trouble">🔧 過去のトラブル事例</option>
+        <option value="notice">💡 構内気づき</option>
         <option value="contact">👤 担当者・連絡先</option>
       </select>
     </div>
@@ -219,7 +222,7 @@
       </div>
       <div class="form-group"><label class="form-label">内容 *</label><textarea id="e-content" class="form-textarea" placeholder="詳細を入力..."></textarea></div>
     <div class="form-group"><label class="form-label">📎 画像・動画URL（Google Drive、複数可・改行で区切る）</label><textarea id="e-media-url" class="form-textarea" placeholder="Google DriveのリンクURLを貼り付け\n複数貼る場合は改行して入力" style="min-height:80px"></textarea></div>
-    <div class="form-group"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
+    <div class="form-group admin-only"><label class="form-label" style="color:var(--danger)">🔒 管理者メモ（非公開）</label><textarea id="e-admin-note" class="form-textarea" placeholder="個人名・詳細など（管理者のみ閲覧可）" style="min-height:70px;border-color:var(--danger)"></textarea></div>
     </div>
     <div id="e-contact-fields" style="display:none">
       <div class="form-group"><label class="form-label">名前 *</label><input id="e-cname" class="form-input" type="text" placeholder="例: 田中 一郎" /></div>
@@ -651,6 +654,7 @@ function renderDetail(entries) {
   };
   const cautions = entries.filter(e => e.cat === 'caution').sort(sortByHeadlineDate);
   const troubles = entries.filter(e => e.cat === 'trouble').sort(sortByHeadlineDate);
+  const notices = entries.filter(e => e.cat === 'notice').sort(sortByHeadlineDate);
   const contacts = entries.filter(e => e.cat === 'contact');
 
   const renderAccordion = (e) => `
@@ -679,6 +683,10 @@ function renderDetail(entries) {
     <div>
       <div class="sec-header"><span>🔧</span><span class="sec-title">過去のトラブル事例</span><button class="sec-add" onclick="openAddEntry('trouble')">＋</button></div>
       ${troubles.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
+    </div>
+    <div>
+      <div class="sec-header"><span>💡</span><span class="sec-title">構内気づき</span><button class="sec-add-all" onclick="openAddEntry('notice')">＋</button></div>
+      ${notices.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
       <div class="sec-header"><span>👤</span><span class="sec-title">担当者・連絡先</span><button class="sec-add" onclick="openAddEntry('contact')">＋</button></div>
