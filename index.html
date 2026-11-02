@@ -27,7 +27,8 @@
   .hbtn.acc { color: var(--accent); font-size: 15px; font-weight: 600; border-radius: var(--rs); padding: 6px 12px; }
   .hbtn.admin-badge { color: #fff; background: var(--accent); font-size: 12px; font-weight: 600; border-radius: var(--rs); padding: 5px 10px; }
   .tab-wrap { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
-  .tab-btn { flex: 1; padding: 12px 8px; border: none; background: none; font-size: 14px; font-family: inherit; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab-btn { flex: 1; padding: 8px 2px; display: flex; flex-direction: column; align-items: center; gap: 2px; border: none; background: none; font-size: 11px; font-family: inherit; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab-ico { font-size: 18px; line-height: 1.2; }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
   .search-wrap { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
   .search-input { width: 100%; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--rs); font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
@@ -47,7 +48,6 @@
   .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
   .accordion.caution { border-left: 3px solid var(--danger); }
   .accordion.trouble { border-left: 3px solid var(--warn); }
-  .accordion.notice { border-left: 3px solid var(--info); }
   .accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
   .accordion-headline { flex: 1; font-size: 14px; font-weight: 600; }
   .accordion-meta { font-size: 11px; color: var(--muted); }
@@ -112,10 +112,11 @@
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
-    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')">🏭 工場</button>
-    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')">📋 更新</button>
-    <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')">🚨 災害</button>
-    <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')">⚡ ヒヤリ</button>
+    <button class="tab-btn active" id="tab-factories" onclick="switchTab('factories')"><span class="tab-ico">🏭</span>工場</button>
+    <button class="tab-btn" id="tab-updates" onclick="switchTab('updates')"><span class="tab-ico">📋</span>更新</button>
+    <button class="tab-btn" id="tab-disasters" onclick="switchTab('disasters')"><span class="tab-ico">🚨</span>災害</button>
+    <button class="tab-btn" id="tab-nearmisses" onclick="switchTab('nearmisses')"><span class="tab-ico">⚡</span>ヒヤリ</button>
+    <button class="tab-btn" id="tab-decisions" onclick="switchTab('decisions')"><span class="tab-ico">📌</span>決定事項</button>
   </div>
   <div id="tab-factories-content">
     <div class="search-wrap">
@@ -142,6 +143,14 @@
     <div class="content">
       <button class="add-factory-btn" onclick="openAddNearMiss()" style="margin-bottom:12px">＋ ヒヤリハットを報告</button>
       <div id="nearmisses-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+    </div>
+  </div>
+  <div id="tab-decisions-content" style="display:none">
+    <div class="content">
+      <div class="admin-only" style="margin-bottom:12px">
+        <button class="add-factory-btn" onclick="openAddDecision()">＋ 決定事項を追加</button>
+      </div>
+      <div id="decisions-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
     </div>
   </div>
 </div>
@@ -204,7 +213,6 @@
       <select id="e-cat" class="form-select" onchange="toggleEntryFields()">
         <option value="caution">⚠️ 注意事項・危険箇所</option>
         <option value="trouble">🔧 過去のトラブル事例</option>
-        <option value="notice">💡 構内気づき</option>
         <option value="contact">👤 担当者・連絡先</option>
       </select>
     </div>
@@ -273,6 +281,22 @@
   </div>
 </div>
 
+<!-- 決定事項モーダル（管理者のみ） -->
+<div id="modal-decision" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mdc-title">決定事項を追加</div>
+    <div class="form-group"><label class="form-label">見出し *（先頭に日付を入れると新しい順に並びます）</label><input id="dc-headline" class="form-input" type="text" placeholder="例: 2026.8.4 ヘルメット着用ルール変更" /></div>
+    <div class="form-group"><label class="form-label">内容 *</label><textarea id="dc-content" class="form-textarea" placeholder="決定した内容を入力..."></textarea></div>
+    <div class="form-group"><label class="form-label">📎 資料URL（Google Drive、複数可・改行で区切る）</label><textarea id="dc-url" class="form-textarea" placeholder="Google DriveのURLを貼り付け" style="min-height:70px"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-decision')">キャンセル</button>
+      <button class="btn primary" onclick="saveDecision()">保存</button>
+    </div>
+    <div id="dcdelrow" class="del-row" style="display:none"><button class="del-link" onclick="deleteDecision()">この決定事項を削除する</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -326,13 +350,14 @@ function logoutAdmin() {
 }
 
 function switchTab(tab) {
-  ['factories','updates','disasters','nearmisses'].forEach(t => {
+  ['factories','updates','disasters','nearmisses','decisions'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', tab === t);
     document.getElementById('tab-'+t+'-content').style.display = tab === t ? 'block' : 'none';
   });
   if (tab === 'updates') loadUpdates();
   if (tab === 'disasters') loadDisasters();
   if (tab === 'nearmisses') loadNearMisses();
+  if (tab === 'decisions') loadDecisions();
 }
 
 function extractDateFromHeadline(headline) {
@@ -465,6 +490,101 @@ async function deleteDisaster() {
   closeModal('modal-disaster');
   backToList();
   loadDisasters();
+  showToast('削除しました');
+}
+
+// --- 決定事項（管理者のみ編集） ---
+let editingDecisionId = null;
+let decisionCache = [];
+
+async function loadDecisions() {
+  document.getElementById('decisions-list').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+  const { data, error } = await db.from('decisions').select('*');
+  if (error) { showToast('エラー: ' + error.message); return; }
+  const el = document.getElementById('decisions-list');
+  if (!data || !data.length) { el.innerHTML = '<div class="empty">まだ登録されていません</div>'; return; }
+  data.sort((a, b) => {
+    const da = extractDateFromHeadline(a.headline);
+    const db_ = extractDateFromHeadline(b.headline);
+    const ta = da !== null ? da : new Date(a.created_at).getTime();
+    const tb = db_ !== null ? db_ : new Date(b.created_at).getTime();
+    return tb - ta;
+  });
+  decisionCache = data;
+  el.innerHTML = data.map(d => `
+    <div class="factory-card" style="border-left:3px solid #2563EB" onclick="showDecision('${d.id}')">
+      <div class="ficon">📌</div>
+      <div class="finfo">
+        <div class="fname">${d.headline}</div>
+        <div class="faddr">${fmt(d.created_at)}</div>
+      </div>
+      <div style="color:#ccc;font-size:20px">›</div>
+    </div>`).join('');
+}
+
+function showDecision(id) {
+  const d = decisionCache.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('item-title').textContent = d.headline;
+  document.getElementById('item-edit-btn').onclick = function() { openEditDecision(id); };
+  document.getElementById('item-body').innerHTML =
+    '<div style="font-size:14px;line-height:1.7">' + (d.content||'').replace(/\n/g,'<br>') + '</div>' +
+    (d.media_url ? '<div style="margin-top:14px">' + renderMedia(d.media_url) + '</div>' : '') +
+    '<div style="margin-top:14px;font-size:12px;color:var(--muted)">' + fmt(d.created_at) + '</div>';
+  document.getElementById('screen-list').classList.remove('active');
+  document.getElementById('screen-item').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function openAddDecision() {
+  editingDecisionId = null;
+  document.getElementById('mdc-title').textContent = '決定事項を追加';
+  document.getElementById('dc-headline').value = '';
+  document.getElementById('dc-content').value = '';
+  document.getElementById('dc-url').value = '';
+  document.getElementById('dcdelrow').style.display = 'none';
+  document.getElementById('modal-decision').classList.add('open');
+}
+
+function openEditDecision(id) {
+  const d = decisionCache.find(x => x.id === id);
+  if (!d) return;
+  editingDecisionId = id;
+  document.getElementById('mdc-title').textContent = '決定事項を編集';
+  document.getElementById('dc-headline').value = d.headline || '';
+  document.getElementById('dc-content').value = d.content || '';
+  document.getElementById('dc-url').value = d.media_url || '';
+  document.getElementById('dcdelrow').style.display = 'block';
+  document.getElementById('modal-decision').classList.add('open');
+}
+
+async function saveDecision() {
+  const headline = document.getElementById('dc-headline').value.trim();
+  const content = document.getElementById('dc-content').value.trim();
+  const media_url = document.getElementById('dc-url').value.trim();
+  if (!headline) { showToast('見出しを入力してください'); return; }
+  if (!content) { showToast('内容を入力してください'); return; }
+  const wasEditing = !!editingDecisionId;
+  let error;
+  if (wasEditing) {
+    ({ error } = await db.from('decisions').update({ headline, content, media_url }).eq('id', editingDecisionId));
+  } else {
+    ({ error } = await db.from('decisions').insert({ headline, content, media_url }));
+  }
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-decision');
+  backToList();
+  loadDecisions();
+  showToast(wasEditing ? '更新しました' : '追加しました');
+}
+
+async function deleteDecision() {
+  if (!confirm('この決定事項を削除しますか？')) return;
+  const { error } = await db.from('decisions').delete().eq('id', editingDecisionId);
+  if (error) { showToast('エラー: ' + error.message); return; }
+  closeModal('modal-decision');
+  backToList();
+  loadDecisions();
   showToast('削除しました');
 }
 
@@ -654,7 +774,6 @@ function renderDetail(entries) {
   };
   const cautions = entries.filter(e => e.cat === 'caution').sort(sortByHeadlineDate);
   const troubles = entries.filter(e => e.cat === 'trouble').sort(sortByHeadlineDate);
-  const notices = entries.filter(e => e.cat === 'notice').sort(sortByHeadlineDate);
   const contacts = entries.filter(e => e.cat === 'contact');
 
   const renderAccordion = (e) => `
@@ -677,16 +796,12 @@ function renderDetail(entries) {
 
   document.getElementById('detail-body').innerHTML = `
     <div>
-      <div class="sec-header"><span>⚠️</span><span class="sec-title">注意事項・危険箇所</span><button class="sec-add" onclick="openAddEntry('caution')">＋</button></div>
+      <div class="sec-header"><span>⚠️</span><span class="sec-title">注意事項・危険箇所</span><button class="sec-add-all" onclick="openAddEntry('caution')">＋</button></div>
       ${cautions.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
       <div class="sec-header"><span>🔧</span><span class="sec-title">過去のトラブル事例</span><button class="sec-add" onclick="openAddEntry('trouble')">＋</button></div>
       ${troubles.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
-    </div>
-    <div>
-      <div class="sec-header"><span>💡</span><span class="sec-title">構内気づき</span><button class="sec-add-all" onclick="openAddEntry('notice')">＋</button></div>
-      ${notices.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
       <div class="sec-header"><span>👤</span><span class="sec-title">担当者・連絡先</span><button class="sec-add" onclick="openAddEntry('contact')">＋</button></div>
