@@ -287,6 +287,16 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="mdc-title">決定事項を追加</div>
     <div class="form-group"><label class="form-label">見出し *（先頭に日付を入れると新しい順に並びます）</label><input id="dc-headline" class="form-input" type="text" placeholder="例: 2026.8.4 ヘルメット着用ルール変更" /></div>
+    <div class="form-group"><label class="form-label">見出しの背景色</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="" checked> <span style="font-size:13px">なし</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="red"> <span style="background:#FECACA;color:#991B1B;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">赤</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="orange"> <span style="background:#FED7AA;color:#9A3412;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">オレンジ</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="yellow"> <span style="background:#FEF08A;color:#854D0E;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">黄</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="blue"> <span style="background:#BFDBFE;color:#1E40AF;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">青</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dc_label_color" value="green"> <span style="background:#BBF7D0;color:#166534;font-size:13px;padding:2px 10px;border-radius:999px;font-weight:600">緑</span></label>
+        </div>
+      </div>
     <div class="form-group"><label class="form-label">内容 *</label><textarea id="dc-content" class="form-textarea" placeholder="決定した内容を入力..."></textarea></div>
     <div class="form-group"><label class="form-label">📎 資料URL（Google Drive、複数可・改行で区切る）</label><textarea id="dc-url" class="form-textarea" placeholder="Google DriveのURLを貼り付け" style="min-height:70px"></textarea></div>
     <div class="modal-btns">
@@ -515,7 +525,7 @@ async function loadDecisions() {
     <div class="factory-card" style="border-left:3px solid #2563EB" onclick="showDecision('${d.id}')">
       <div class="ficon">📌</div>
       <div class="finfo">
-        <div class="fname">${d.headline}</div>
+        <div class="fname"><span ${d.label_color ? 'style="'+getLabelStyle(d.label_color)+';padding:4px 10px;border-radius:6px;display:inline-block"' : ''}>${d.headline}</span></div>
         <div class="faddr">${fmt(d.created_at)}</div>
       </div>
       <div style="color:#ccc;font-size:20px">›</div>
@@ -542,6 +552,7 @@ function openAddDecision() {
   document.getElementById('dc-headline').value = '';
   document.getElementById('dc-content').value = '';
   document.getElementById('dc-url').value = '';
+  document.querySelectorAll('input[name="dc_label_color"]').forEach(r => r.checked = r.value === '');
   document.getElementById('dcdelrow').style.display = 'none';
   document.getElementById('modal-decision').classList.add('open');
 }
@@ -554,6 +565,7 @@ function openEditDecision(id) {
   document.getElementById('dc-headline').value = d.headline || '';
   document.getElementById('dc-content').value = d.content || '';
   document.getElementById('dc-url').value = d.media_url || '';
+  document.querySelectorAll('input[name="dc_label_color"]').forEach(r => r.checked = r.value === (d.label_color || ''));
   document.getElementById('dcdelrow').style.display = 'block';
   document.getElementById('modal-decision').classList.add('open');
 }
@@ -562,14 +574,15 @@ async function saveDecision() {
   const headline = document.getElementById('dc-headline').value.trim();
   const content = document.getElementById('dc-content').value.trim();
   const media_url = document.getElementById('dc-url').value.trim();
+  const label_color = document.querySelector('input[name="dc_label_color"]:checked')?.value || '';
   if (!headline) { showToast('見出しを入力してください'); return; }
   if (!content) { showToast('内容を入力してください'); return; }
   const wasEditing = !!editingDecisionId;
   let error;
   if (wasEditing) {
-    ({ error } = await db.from('decisions').update({ headline, content, media_url }).eq('id', editingDecisionId));
+    ({ error } = await db.from('decisions').update({ headline, content, media_url, label_color }).eq('id', editingDecisionId));
   } else {
-    ({ error } = await db.from('decisions').insert({ headline, content, media_url }));
+    ({ error } = await db.from('decisions').insert({ headline, content, media_url, label_color }));
   }
   if (error) { showToast('エラー: ' + error.message); return; }
   closeModal('modal-decision');
