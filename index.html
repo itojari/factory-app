@@ -20,6 +20,14 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
   .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
+  /* 入口（コード入力）画面。ログインするまで他の画面はすべて隠す */
+  #screen-gate { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
+  body.locked #screen-gate { display: flex; }
+  body.locked .screen:not(#screen-gate) { display: none !important; }
+  .gate-card { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px 22px; text-align: center; }
+  .gate-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .gate-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .gate-error { color: var(--danger); font-size: 13px; margin: 10px 0 0; min-height: 18px; }
   .screen.active { display: block; }
   .header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; }
   .header-title { font-size: 17px; font-weight: 700; flex: 1; }
@@ -104,14 +112,26 @@
   body.is-member .entry-edit-own { display: inline; }
 </style>
 </head>
-<body>
+<body class="locked">
+
+<div id="screen-gate" class="screen">
+  <div class="gate-card">
+    <div class="gate-title">🏭 工場情報</div>
+    <div id="gate-checking" class="gate-sub" style="display:none;margin-bottom:0">確認中...</div>
+    <div id="gate-form">
+      <div class="gate-sub">コードを入力してください</div>
+      <input id="gate-code" class="form-input" type="password" inputmode="numeric" autocomplete="off" placeholder="管理者コードまたは個人コード" onkeydown="if(event.key==='Enter')submitGate()" />
+      <div id="gate-error" class="gate-error"></div>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="submitGate()">入る</button>
+    </div>
+  </div>
+</div>
 
 <div id="screen-list" class="screen active">
   <div class="header">
     <div class="header-title">🏭 工場情報</div>
-    <button id="admin-login-btn" class="hbtn acc" onclick="openAdminLogin()">ログイン</button>
-    <button id="member-logout-btn" class="hbtn admin-badge" style="display:none" onclick="logoutMember()"></button>
-    <button id="admin-logout-btn" class="hbtn admin-badge admin-only" onclick="logoutAdmin()">管理者 ✓</button>
+    <button id="member-logout-btn" class="hbtn admin-badge" style="display:none" onclick="logout()"></button>
+    <button id="admin-logout-btn" class="hbtn admin-badge admin-only" onclick="logout()">管理者 ✓</button>
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
   <div class="tab-wrap">
@@ -176,22 +196,6 @@
   <div class="content" id="item-body"></div>
 </div>
 
-<!-- 管理者ログインモーダル -->
-<div id="modal-admin" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">ログイン</div>
-    <div class="form-group">
-      <label class="form-label">コード</label>
-      <input id="admin-pw" class="form-input" type="password" placeholder="管理者コードまたは個人コードを入力" onkeydown="if(event.key==='Enter')checkLogin()" />
-    </div>
-    <div id="admin-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none">コードが違います</div>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeModal('modal-admin')">キャンセル</button>
-      <button class="btn primary" onclick="checkLogin()">ログイン</button>
-    </div>
-  </div>
-</div>
 
 <div id="modal-factory" class="modal-overlay">
   <div class="modal">
@@ -335,53 +339,100 @@ function showToast(msg) {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// 管理者認証
-function openAdminLogin() {
-  document.getElementById('admin-pw').value = '';
-  document.getElementById('admin-error').style.display = 'none';
-  document.getElementById('modal-admin').classList.add('open');
-  setTimeout(() => document.getElementById('admin-pw').focus(), 300);
+// ===== 入口（コード入力）と認証 =====
+const SESSION_KEY = 'factory_session';
+const SESSION_DAYS = 30;
+
+function saveSession(code) {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ code, ts: Date.now() })); } catch (e) {}
+}
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+}
+// 保存済みのコードを返す（なし・期限切れなら null）
+function loadSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    if (!s || !s.code) return null;
+    if (Date.now() - s.ts > SESSION_DAYS * 86400000) { clearSession(); return null; }
+    return s.code;
+  } catch (e) { return null; }
 }
 
-async function checkLogin() {
-  const code = document.getElementById('admin-pw').value.trim();
-  if (!code) return;
-  const err = document.getElementById('admin-error');
-  if (code === ADMIN_PASSWORD) {
+// コードを確認して結果を返す（管理者 / 個人 / 無効 / 未設定 / エラー）
+async function verifyCode(code) {
+  if (code === ADMIN_PASSWORD) return { role: 'admin' };
+  const { data, error } = await db.from('members').select('*').eq('code', code).maybeSingle();
+  if (error) return { role: 'error', message: error.message };
+  if (!data) return { role: 'invalid' };
+  if (data.member_no == null) return { role: 'incomplete' };
+  return { role: 'member', member: data };
+}
+
+// ロックを解除してアプリを開始
+function enterApp(result) {
+  if (result.role === 'admin') {
     isAdmin = true;
     document.body.classList.add('is-admin');
-    document.getElementById('admin-login-btn').style.display = 'none';
-    closeModal('modal-admin');
-    showToast('管理者モードで入りました');
-    return;
+  } else {
+    currentMember = result.member;
+    document.body.classList.add('is-member');
+    const badge = document.getElementById('member-logout-btn');
+    badge.textContent = result.member.name + ' ✓';
+    badge.style.display = 'flex';
   }
-  const { data, error } = await db.from('members').select('*').eq('code', code).maybeSingle();
-  if (error) { showToast('エラー: ' + error.message); return; }
-  if (!data) { err.style.display = 'block'; return; }
-  if (data.member_no == null) { showToast('このコードは設定が未完了です。管理者に連絡してください'); return; }
-  currentMember = data;
-  document.body.classList.add('is-member');
-  document.getElementById('admin-login-btn').style.display = 'none';
-  const badge = document.getElementById('member-logout-btn');
-  badge.textContent = data.name + ' ✓';
-  badge.style.display = 'flex';
-  closeModal('modal-admin');
-  showToast(data.name + ' さんでログインしました');
+  document.body.classList.remove('locked');
+  loadFactories();
 }
 
-function logoutAdmin() {
-  isAdmin = false;
-  document.body.classList.remove('is-admin');
-  document.getElementById('admin-login-btn').style.display = 'flex';
-  showToast('管理者モードを終了しました');
+function showGateForm(msg) {
+  document.getElementById('gate-checking').style.display = 'none';
+  document.getElementById('gate-form').style.display = 'block';
+  document.getElementById('gate-error').textContent = msg || '';
 }
 
-function logoutMember() {
-  currentMember = null;
-  document.body.classList.remove('is-member');
-  document.getElementById('member-logout-btn').style.display = 'none';
-  document.getElementById('admin-login-btn').style.display = 'flex';
-  showToast('ログアウトしました');
+async function submitGate() {
+  const input = document.getElementById('gate-code');
+  const code = input.value.trim();
+  if (!code) return;
+  const r = await verifyCode(code);
+  if (r.role === 'admin' || r.role === 'member') {
+    saveSession(code);
+    input.value = '';
+    enterApp(r);
+    showToast(r.role === 'admin' ? '管理者として入りました' : r.member.name + ' さんでログインしました');
+  } else if (r.role === 'incomplete') {
+    showGateForm('このコードは設定が未完了です。管理者に連絡してください');
+  } else if (r.role === 'error') {
+    showGateForm('接続エラー: ' + r.message);
+  } else {
+    showGateForm('コードが違います');
+  }
+}
+
+function reloadApp() { location.reload(); }
+
+function logout() {
+  if (!confirm('ログアウトしますか？')) return;
+  clearSession();
+  reloadApp();
+}
+
+// 起動時: 保存済みのコードがあれば自動で入る（毎回コードを確認し直す）
+async function bootGate() {
+  const code = loadSession();
+  if (!code) return;
+  document.getElementById('gate-form').style.display = 'none';
+  document.getElementById('gate-checking').style.display = 'block';
+  const r = await verifyCode(code);
+  if (r.role === 'admin' || r.role === 'member') {
+    enterApp(r);
+  } else if (r.role === 'error') {
+    showGateForm('接続できません。通信状況を確認してください');  // 保存は消さない
+  } else {
+    clearSession();  // 削除されたコードなど
+    showGateForm('');
+  }
 }
 
 function switchTab(tab) {
@@ -1032,7 +1083,7 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
 });
 
-loadFactories();
+bootGate();
 </script>
 </body>
 </html>
