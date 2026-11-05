@@ -43,7 +43,6 @@
   .tag.i { background: var(--info-light); color: var(--info); }
   .sec-header { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; margin-top: 8px; }
   .sec-title { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .sec-add-all { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: block; }
   .sec-add { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 24px; line-height: 1; padding: 0 4px; display: none; }
   .accordion { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
   .accordion.caution { border-left: 3px solid var(--danger); }
@@ -100,6 +99,9 @@
   body.is-admin .sec-add { display: block; }
   body.is-admin .entry-edit { display: inline; }
   body.is-admin .cedit { display: block; }
+  #e-author[readonly] { background: #ececea; color: var(--muted); cursor: not-allowed; }
+  body.is-member .sec-add-staff { display: block; }
+  body.is-member .entry-edit-own { display: inline; }
 </style>
 </head>
 <body>
@@ -107,7 +109,8 @@
 <div id="screen-list" class="screen active">
   <div class="header">
     <div class="header-title">🏭 工場情報</div>
-    <button id="admin-login-btn" class="hbtn acc" onclick="openAdminLogin()">管理者</button>
+    <button id="admin-login-btn" class="hbtn acc" onclick="openAdminLogin()">ログイン</button>
+    <button id="member-logout-btn" class="hbtn admin-badge" style="display:none" onclick="logoutMember()"></button>
     <button id="admin-logout-btn" class="hbtn admin-badge admin-only" onclick="logoutAdmin()">管理者 ✓</button>
     <button class="hbtn acc admin-only" onclick="openAddFactory()">＋ 追加</button>
   </div>
@@ -177,15 +180,15 @@
 <div id="modal-admin" class="modal-overlay">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">管理者ログイン</div>
+    <div class="modal-title">ログイン</div>
     <div class="form-group">
-      <label class="form-label">パスワード</label>
-      <input id="admin-pw" class="form-input" type="password" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')checkAdmin()" />
+      <label class="form-label">コード</label>
+      <input id="admin-pw" class="form-input" type="password" placeholder="管理者コードまたは個人コードを入力" onkeydown="if(event.key==='Enter')checkLogin()" />
     </div>
-    <div id="admin-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none">パスワードが違います</div>
+    <div id="admin-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none">コードが違います</div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal('modal-admin')">キャンセル</button>
-      <button class="btn primary" onclick="checkAdmin()">ログイン</button>
+      <button class="btn primary" onclick="checkLogin()">ログイン</button>
     </div>
   </div>
 </div>
@@ -321,6 +324,7 @@ let currentFactoryId = null;
 let editingEntryId = null;
 let editingFactory = false;
 let isAdmin = false;
+let currentMember = null; // 個人コードでログイン中の人 {code, name, color}
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -339,17 +343,30 @@ function openAdminLogin() {
   setTimeout(() => document.getElementById('admin-pw').focus(), 300);
 }
 
-function checkAdmin() {
-  const pw = document.getElementById('admin-pw').value;
-  if (pw === ADMIN_PASSWORD) {
+async function checkLogin() {
+  const code = document.getElementById('admin-pw').value.trim();
+  if (!code) return;
+  const err = document.getElementById('admin-error');
+  if (code === ADMIN_PASSWORD) {
     isAdmin = true;
     document.body.classList.add('is-admin');
     document.getElementById('admin-login-btn').style.display = 'none';
     closeModal('modal-admin');
     showToast('管理者モードで入りました');
-  } else {
-    document.getElementById('admin-error').style.display = 'block';
+    return;
   }
+  const { data, error } = await db.from('members').select('*').eq('code', code).maybeSingle();
+  if (error) { showToast('エラー: ' + error.message); return; }
+  if (!data) { err.style.display = 'block'; return; }
+  if (data.member_no == null) { showToast('このコードは設定が未完了です。管理者に連絡してください'); return; }
+  currentMember = data;
+  document.body.classList.add('is-member');
+  document.getElementById('admin-login-btn').style.display = 'none';
+  const badge = document.getElementById('member-logout-btn');
+  badge.textContent = data.name + ' ✓';
+  badge.style.display = 'flex';
+  closeModal('modal-admin');
+  showToast(data.name + ' さんでログインしました');
 }
 
 function logoutAdmin() {
@@ -357,6 +374,14 @@ function logoutAdmin() {
   document.body.classList.remove('is-admin');
   document.getElementById('admin-login-btn').style.display = 'flex';
   showToast('管理者モードを終了しました');
+}
+
+function logoutMember() {
+  currentMember = null;
+  document.body.classList.remove('is-member');
+  document.getElementById('member-logout-btn').style.display = 'none';
+  document.getElementById('admin-login-btn').style.display = 'flex';
+  showToast('ログアウトしました');
 }
 
 function switchTab(tab) {
@@ -802,14 +827,14 @@ function renderDetail(entries) {
         ${e.admin_note ? `<div class="admin-only" style="margin-top:10px;padding:10px;background:#fdf0f0;border-radius:8px;border:1px solid #f5c0c0"><div style="font-size:11px;font-weight:700;color:#8b2020;margin-bottom:4px">🔒 管理者メモ（非公開）</div><div style="font-size:13px;line-height:1.6">${e.admin_note}</div></div>` : ""}
         <div class="accordion-footer">
           <div class="accordion-author">${e.author||'匿名'} · ${fmt(e.created_at)}</div>
-          <button class="entry-edit" onclick="openEditEntry('${e.id}')">編集</button>
+          <button class="entry-edit${e.cat === 'caution' && isOwnEntry(e) ? ' entry-edit-own' : ''}" onclick="openEditEntry('${e.id}')">編集</button>
         </div>
       </div>
     </div>`;
 
   document.getElementById('detail-body').innerHTML = `
     <div>
-      <div class="sec-header"><span>⚠️</span><span class="sec-title">注意事項・危険箇所</span><button class="sec-add-all" onclick="openAddEntry('caution')">＋</button></div>
+      <div class="sec-header"><span>⚠️</span><span class="sec-title">注意事項・危険箇所</span><button class="sec-add sec-add-staff" onclick="openAddEntry('caution')">＋</button></div>
       ${cautions.map(renderAccordion).join('') || '<div class="empty">まだ登録されていません</div>'}
     </div>
     <div>
@@ -896,6 +921,18 @@ function toggleEntryFields() {
   document.getElementById('e-text-fields').style.display = cat === 'contact' ? 'none' : 'block';
 }
 
+// 個人コードの人が「自分の投稿」かどうか
+function isOwnEntry(e) {
+  return !!currentMember && currentMember.member_no != null && e.member_no === currentMember.member_no;
+}
+
+// 個人コードでログイン中は、投稿者名と背景色を変更できないようにする
+function applyAuthorLock() {
+  const locked = !!currentMember;
+  document.getElementById('e-author').readOnly = locked;
+  document.querySelectorAll('input[name="label_color"]').forEach(r => r.disabled = locked);
+}
+
 function openAddEntry(cat) {
   editingEntryId = null;
   document.getElementById('me-title').textContent = '情報を追加';
@@ -910,6 +947,12 @@ function openAddEntry(cat) {
   document.getElementById('e-admin-note').value = '';
   document.getElementById('e-media-url').value = '';
   document.getElementById('edelrow').style.display = 'none';
+  // 個人コードでログイン中なら、割り当てられた氏名と色を自動入力
+  if (currentMember) {
+    document.getElementById('e-author').value = currentMember.name || '';
+    document.querySelectorAll('input[name="label_color"]').forEach(r => r.checked = r.value === (currentMember.color || ''));
+  }
+  applyAuthorLock();
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
 }
@@ -917,6 +960,8 @@ function openAddEntry(cat) {
 async function openEditEntry(id) {
   editingEntryId = id;
   const { data } = await db.from('entries').select('*').eq('id', id).single();
+  if (!data) { editingEntryId = null; return; }
+  if (!isAdmin && !isOwnEntry(data)) { editingEntryId = null; showToast('自分の投稿のみ編集できます'); return; }
   document.getElementById('me-title').textContent = '編集';
   document.getElementById('e-cat').value = data.cat;
   document.getElementById('e-headline').value = data.headline || '';
@@ -928,7 +973,8 @@ async function openEditEntry(id) {
   document.getElementById('e-ctel').value = data.tel || '';
   document.getElementById('e-admin-note').value = data.admin_note || '';
   document.getElementById('e-media-url').value = data.media_url || '';
-  document.getElementById('edelrow').style.display = 'block';
+  document.getElementById('edelrow').style.display = (isAdmin || currentMember) ? 'block' : 'none';
+  applyAuthorLock();
   toggleEntryFields();
   document.getElementById('modal-entry').classList.add('open');
 }
@@ -955,6 +1001,7 @@ async function saveEntry() {
   if (editingEntryId) {
     ({ error } = await db.from('entries').update(body).eq('id', editingEntryId));
   } else {
+    if (currentMember) body.member_no = currentMember.member_no;
     ({ error } = await db.from('entries').insert(body));
   }
   if (error) { showToast('エラー: ' + error.message); return; }
