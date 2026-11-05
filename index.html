@@ -999,9 +999,16 @@ async function saveEntry() {
   }
   let error;
   if (editingEntryId) {
+    // 個人コードの編集では、氏名と色は送らない（元の値のまま）
+    if (currentMember) { delete body.author; delete body.label_color; }
     ({ error } = await db.from('entries').update(body).eq('id', editingEntryId));
   } else {
-    if (currentMember) body.member_no = currentMember.member_no;
+    if (currentMember) {
+      // 個人コードの新規投稿では、入力欄に関係なく割り当て通りの氏名・色で保存
+      body.member_no = currentMember.member_no;
+      body.author = currentMember.name;
+      body.label_color = currentMember.color || '';
+    }
     ({ error } = await db.from('entries').insert(body));
   }
   if (error) { showToast('エラー: ' + error.message); return; }
